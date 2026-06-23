@@ -17,7 +17,7 @@ opentelemetry-semantic-conventions==0.61b0
 opentelemetry-util-http==0.61b0
 psycopg2-binary==2.9.11
 pydantic==2.12.5
-pydantic-settings==2.13.1
+pydantic-settings==2.14.2
 redis==7.4.0
 structlog==24.1.0
 uvicorn==0.42.0
