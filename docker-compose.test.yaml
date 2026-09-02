@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:alpine
+    container_name: st-test-postgres
+    environment:
+      POSTGRES_USER: st_test
+      POSTGRES_PASSWORD: st_test
+      POSTGRES_DB: st_database
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U st_test -d st_database"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  timescale:
+    image: timescale/timescaledb:latest-pg16
+    container_name: st-test-timescale
+    environment:
+      POSTGRES_USER: st_test
+      POSTGRES_PASSWORD: st_test
+      POSTGRES_DB: st_ts_database
+    ports:
+      - "15433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U st_test -d st_ts_database"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:alpine
+    container_name: st-test-redis
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 20

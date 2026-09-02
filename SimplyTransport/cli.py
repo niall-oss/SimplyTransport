@@ -13,12 +13,10 @@ from litestar.plugins import CLIPluginProtocol
 from rich.console import Console
 from rich.table import Table
 
-import SimplyTransport.lib.gtfs_importers as imp
 from SimplyTransport.lib.db import services as db_services
 
 from .domain.events.event_types import EventType
 from .domain.events.repo import create_event_with_session, provide_event_repo
-from .domain.services.statistics_service import provide_statistics_service
 from .lib import settings as lib_settings
 from .lib.cache import provide_redis_service
 from .lib.cache_keys import CacheKeys
@@ -138,26 +136,27 @@ class CLIPlugin(CLIPluginProtocol):
 
         @cli.command(name="importgtfs", help="Imports GTFS data into the database")
         @click.option("-dir", help="Override the directory containing the GTFS data to import")
+        @click.option("--yes", is_flag=True, help="Skip the confirmation prompt")
         @make_sync
-        async def importgtfs(dir: str):
+        async def importgtfs(dir: str, yes: bool):
             """Imports GTFS data into the database"""
+            from SimplyTransport.lib.gtfs_dataset import import_gtfs_dataset
 
             console = Console()
-            console.print("Importing GTFS data...")
-
             dir = gtfs_directory_validator(dir, console)
-
             dataset = gtfs_dataset_label_from_import_dir(dir)
-            response = click.prompt(
-                f"\nYou are about to import this dataset and assign it to '{dataset}'. "
-                "Press 'y' to continue, anything else to abort: ",
-                type=str,
-                default="",
-                show_default=False,
-            )
-            if response != "y":
-                console.print("[red]Aborting import...")
-                return
+
+            if not yes:
+                response = click.prompt(
+                    f"\nYou are about to import this dataset and assign it to '{dataset}'. "
+                    "Press 'y' to continue, anything else to abort: ",
+                    type=str,
+                    default="",
+                    show_default=False,
+                )
+                if response != "y":
+                    console.print("[red]Aborting import...")
+                    return
 
             lock = await try_acquire_lock(_CLI_LOCK_GTFS_STATIC_IMPORT, _CLI_LOCK_GTFS_STATIC_IMPORT_TTL_S)
             if lock is None:
@@ -168,107 +167,7 @@ class CLIPlugin(CLIPluginProtocol):
             lock_client, lock_token = lock
 
             try:
-                files_to_import = [
-                    "agency.txt",
-                    "calendar.txt",
-                    "calendar_dates.txt",
-                    "routes.txt",
-                    "stops.txt",
-                    "trips.txt",
-                    "stop_times.txt",
-                    "shapes.txt",
-                ]
-                attributes_of_total_rows = {}
-
-                total_time_taken = 0.0
-                start = time.perf_counter()
-
-                for file in files_to_import:
-                    file_start = time.perf_counter()
-                    if not (os.path.exists(dir) and os.path.isfile(dir + file)):
-                        console.print(f"[red]Error: File '{file}' does not exist. Skipping...")
-                        attributes_of_total_rows[file.replace(".txt", "")] = {
-                            "time_taken(s)": 0,
-                            "row_count": 0,
-                            "error": f"File '{file}' does not exist.",
-                        }
-                        continue
-
-                    generic_importer = imp.GTFSImporter(file, dir)
-                    reader = generic_importer.get_reader()
-                    try:
-                        importer = imp.get_importer_for_file(file, reader, None, dataset)
-                    except ValueError:
-                        console.print(
-                            f"\n[red]Error: File '{file}' does not have a supported importer. Skipping..."
-                        )
-                        attributes_of_total_rows[file.replace(".txt", "")] = {
-                            "time_taken(s)": 0,
-                            "row_count": 0,
-                            "error": f"File '{file}' does not have a supported importer.",
-                        }
-                        continue
-
-                    with rp.Progress(
-                        rp.SpinnerColumn(finished_text="✅"),
-                        "[progress.description]{task.description}",
-                        rp.TimeElapsedColumn(),
-                    ) as progress:
-                        task = progress.add_task("[red]Clearing database table...", total=1)
-                        importer.clear_table()
-                        progress.update(task, advance=1)
-
-                    await importer.import_data()
-
-                    file_finish = time.perf_counter()
-                    time_taken = round(file_finish - file_start, 2)
-                    total_time_taken += time_taken
-                    row_count = importer.rows_imported
-                    console.print(f"[green]Imported {row_count} rows from {file}")
-
-                    attributes_of_total_rows[file.replace(".txt", "")] = {
-                        "time_taken(s)": time_taken,
-                        "row_count": row_count,
-                    }
-
-                attributes = {
-                    "dataset": dataset,
-                    "totals": attributes_of_total_rows,
-                    "total_time_taken(s)": round(total_time_taken, 2),
-                }
-
-                await create_event_with_session(
-                    EventType.GTFS_DATABASE_UPDATED,
-                    "GTFS static data updated with latest schedules",
-                    attributes,
-                )
-
-                redis_service = await provide_redis_service()
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.StopMaps.STOP_MAP_DELETE_ALL_KEY_TEMPLATE
-                )
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.StopMaps.STOP_MAP_NEARBY_DELETE_ALL_KEY_TEMPLATE
-                )
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.RouteMaps.ROUTE_MAP_DELETE_ALL_KEY_TEMPLATE
-                )
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.Schedules.SCHEDULE_DELETE_ALL_KEY_TEMPLATE
-                )
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.StaticMaps.STATIC_MAP_AGENCY_ROUTE_DELETE_ALL_KEY_TEMPLATE
-                )
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.StaticMaps.STATIC_MAP_STOP_DELETE_ALL_KEY_TEMPLATE
-                )
-                await redis_service.delete_keys_by_pattern(CacheKeys.StopApi.DETAILED_DELETE_ALL_KEY_TEMPLATE)
-                await redis_service.delete_keys_by_pattern(
-                    CacheKeys.RealTime.REALTIME_ROUTE_DELETE_ALL_KEY_TEMPLATE
-                )
-
-                finish = time.perf_counter()
-                console.print(f"\n[blue]Finished import in {round(finish - start, 2)} second(s)")
+                await import_gtfs_dataset(dir)
             finally:
                 await release_lock(lock_client, _CLI_LOCK_GTFS_STATIC_IMPORT, lock_token)
 
@@ -677,35 +576,12 @@ class CLIPlugin(CLIPluginProtocol):
         @cli.command(name="generatestatistics", help="Generates the statistics for the database")
         @make_sync
         async def generatestatistics():
+            from SimplyTransport.lib.gtfs_dataset import generate_database_statistics
+
             console = Console()
             console.print("Generating statistics...")
-            start = time.perf_counter()
-
-            async with async_timescale_session_factory() as timescale_session:
-                async with async_session_factory() as session:
-                    statistics_service = await provide_statistics_service(
-                        db_session=session,
-                        timescale_db_session=timescale_session,
-                    )
-                    await statistics_service.update_all_statistics()
-
-            redis_service = await provide_redis_service()
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.Statistics.STATISTICS_DELETE_ALL_KEY_TEMPLATE
-            )
-
-            finish = time.perf_counter()
-
-            attributes = {
-                "time_taken(s)": round(finish - start, 2),
-            }
-            await create_event_with_session(
-                EventType.DATABASE_STATISTICS_UPDATED,
-                "Statistics generated for the database",
-                attributes,
-            )
-            logger.info(f"Finished generating statistics in {round(finish - start, 2)} second(s)")
-            console.print(f"\n[blue]Finished generating statistics in {round(finish - start, 2)} second(s)")
+            time_taken = await generate_database_statistics()
+            console.print(f"\n[blue]Finished generating statistics in {time_taken} second(s)")
 
         @cli.command(
             name="recorddelays", help="Records the stop time delays for every schedule in the database"

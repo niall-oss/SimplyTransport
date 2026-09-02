@@ -2,11 +2,13 @@ import asyncio
 from collections.abc import AsyncGenerator
 
 from advanced_alchemy.base import UUIDBase
-from sqlalchemy import MetaData, text
+from sqlalchemy import MetaData, create_engine, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from .database import async_engine, engine
-from .timescale_database import async_timescale_engine
+from SimplyTransport.lib import settings
+
+from .database import get_async_engine, get_sync_engine
+from .timescale_database import get_async_timescale_engine
 
 
 async def create_database_tables() -> None:
@@ -19,6 +21,7 @@ async def create_database_tables() -> None:
     Raises:
         ConnectionRefusedError: If the database connection is refused.
     """
+    async_engine = get_async_engine()
     try:
         async with async_engine.begin() as conn:
             await conn.run_sync(UUIDBase.metadata.create_all)
@@ -30,6 +33,7 @@ async def create_database_tables() -> None:
         )
         raise e
 
+    async_timescale_engine = get_async_timescale_engine()
     try:
         async with async_timescale_engine.begin() as conn:
             await conn.run_sync(UUIDBase.metadata.create_all)
@@ -42,6 +46,38 @@ async def create_database_tables() -> None:
         raise e
 
 
+def create_database_sync() -> None:
+    """Create tables on Postgres and Timescale using sync engines."""
+    engine = get_sync_engine()
+    try:
+        UUIDBase.metadata.create_all(bind=engine)
+    except ConnectionRefusedError as e:
+        print(e)
+        print(
+            f"\nDatabase connection refused. Please ensure the database is "
+            f"running and accessible.\nURL: {engine.url}\n"
+        )
+        raise e
+
+    timescale_sync_url = settings.app.TIMESCALE_URL.replace(
+        "postgresql+asyncpg://", "postgresql+psycopg2://"
+    )
+    timescale_engine = create_engine(
+        timescale_sync_url, echo=settings.app.DB_ECHO, pool_pre_ping=True
+    )
+    try:
+        UUIDBase.metadata.create_all(bind=timescale_engine)
+    except ConnectionRefusedError as e:
+        print(e)
+        print(
+            f"\nTimescale database connection refused. Please ensure the database is "
+            f"running and accessible.\nURL: {timescale_engine.url}\n"
+        )
+        raise e
+    finally:
+        timescale_engine.dispose()
+
+
 async def recreate_indexes(table_name: str | None = None):
     """Recreate all indexes
 
@@ -50,6 +86,7 @@ async def recreate_indexes(table_name: str | None = None):
         If None, indexes will be recreated for all tables.
 
     """
+    engine = get_sync_engine()
     metadata = MetaData()
     metadata.reflect(bind=engine)
 
@@ -93,8 +130,8 @@ async def test_database_connections():
 
     async def main():
         tasks = [
-            asyncio.create_task(check_connection(async_engine, "Main")),
-            asyncio.create_task(check_connection(async_timescale_engine, "Timescale")),
+            asyncio.create_task(check_connection(get_async_engine(), "Main")),
+            asyncio.create_task(check_connection(get_async_timescale_engine(), "Timescale")),
         ]
         await asyncio.gather(*tasks)
 
@@ -104,7 +141,7 @@ async def test_database_connections():
 async def provide_timescale_db_session() -> AsyncGenerator[AsyncSession]:
     """This provides the Timescale database session."""
 
-    session = AsyncSession(async_timescale_engine)
+    session = AsyncSession(get_async_timescale_engine())
     try:
         async with session.begin():
             yield session
