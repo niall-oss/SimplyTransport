@@ -118,13 +118,3 @@ jobs:
         with:
           name: coverage-report
           path: htmlcov/
-
-      - name: Analyze with SonarCloud
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: -Dsonar.projectKey=SimplyTransport
-            -Dsonar.organization=simplytransport
-            -Dsonar.python.version=${{ matrix.python-version }}

@@ -37,6 +37,10 @@ progress_columns = (
 )
 
 RETENTION_PERIOD = datetime.now(UTC) - timedelta(minutes=30)
+HTTP_TIMEOUT_SECONDS = 5.0
+HTTP_MAX_RETRIES = 2
+HTTP_RETRY_DELAY_SECONDS = 1.0
+HTTP_MAX_ATTEMPTS = HTTP_MAX_RETRIES + 1
 
 
 @dataclass(frozen=True)
@@ -89,6 +93,46 @@ def _parse_rt_start_date(date_str: str | None, fallback: date) -> date:
     return tdc.convert_joined_date_to_date(date_str)
 
 
+async def _fetch_realtime_json(url: str, api_key: str) -> dict | None:
+    headers = {
+        "Cache-Control": "no-cache",
+        "x-api-key": api_key,
+    }
+
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+        for attempt in range(1, HTTP_MAX_ATTEMPTS + 1):
+            try:
+                response = await client.get(url, headers=headers)
+            except httpx.RequestError as e:
+                logger.warning(
+                    f"RealTime: {url} request failed on attempt {attempt}/{HTTP_MAX_ATTEMPTS}: {e}"
+                )
+            else:
+                if 400 <= response.status_code < 500:
+                    logger.warning(f"RealTime: {url} returned {response.status_code}")
+                    return None
+                if response.status_code != 200:
+                    logger.warning(
+                        f"RealTime: {url} returned {response.status_code} "
+                        f"on attempt {attempt}/{HTTP_MAX_ATTEMPTS}"
+                    )
+                else:
+                    try:
+                        return response.json()
+                    except JSONDecodeError as e:
+                        logger.error(
+                            f"RealTime: {url} returned invalid JSON "
+                            f"on attempt {attempt}/{HTTP_MAX_ATTEMPTS}: {e}"
+                        )
+
+            if attempt == HTTP_MAX_ATTEMPTS:
+                logger.warning(f"RealTime: {url} failed after {HTTP_MAX_ATTEMPTS} attempts")
+                return None
+            await asyncio.sleep(HTTP_RETRY_DELAY_SECONDS)
+
+    return None
+
+
 class RealTimeImporter:
     def __init__(self, url: str, api_key: str, dataset: str) -> None:
         self.url = url
@@ -96,22 +140,7 @@ class RealTimeImporter:
         self.dataset = dataset
 
     async def get_data(self) -> dict | None:
-        headers = {
-            "Cache-Control": "no-cache",
-            "x-api-key": self.api_key,
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(self.url, headers=headers)
-            if response.status_code != 200:
-                logger.warning(f"RealTime: {self.url} returned {response.status_code}")
-                return None
-
-            try:
-                return response.json()
-            except JSONDecodeError as e:
-                logger.error(f"RealTime: {self.url} returned invalid JSON: {e}")
-                return None
+        return await _fetch_realtime_json(self.url, self.api_key)
 
     async def clear_table_stop_trip(self):
         """Clears the table in the database that corresponds to the dataset for rows older than 60 mins"""
@@ -344,22 +373,7 @@ class RealTimeVehiclesImporter:
         self.dataset = dataset
 
     async def get_data(self) -> dict | None:
-        headers = {
-            "Cache-Control": "no-cache",
-            "x-api-key": self.api_key,
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(self.url, headers=headers)
-            if response.status_code != 200:
-                logger.warning(f"RealTime Vehicles: {self.url} returned {response.status_code}")
-                return None
-
-            try:
-                return response.json()
-            except JSONDecodeError as e:
-                logger.error(f"RealTime Vehicles: {self.url} returned invalid JSON: {e}")
-                return None
+        return await _fetch_realtime_json(self.url, self.api_key)
 
     async def clear_table_vehicles(self):
         """Clears the table in the database that corresponds to the dataset for rows older than 60 mins"""
