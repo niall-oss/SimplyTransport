@@ -111,17 +111,17 @@ async def import_gtfs_dataset(directory: str) -> None:
         attributes,
     )
 
-    redis_service = await provide_redis_service()
-    await redis_service.delete_keys_by_pattern(CacheKeys.StopMaps.STOP_MAP_DELETE_ALL_KEY_TEMPLATE)
-    await redis_service.delete_keys_by_pattern(CacheKeys.StopMaps.STOP_MAP_NEARBY_DELETE_ALL_KEY_TEMPLATE)
-    await redis_service.delete_keys_by_pattern(CacheKeys.RouteMaps.ROUTE_MAP_DELETE_ALL_KEY_TEMPLATE)
-    await redis_service.delete_keys_by_pattern(CacheKeys.Schedules.SCHEDULE_DELETE_ALL_KEY_TEMPLATE)
-    await redis_service.delete_keys_by_pattern(
-        CacheKeys.StaticMaps.STATIC_MAP_AGENCY_ROUTE_DELETE_ALL_KEY_TEMPLATE
-    )
-    await redis_service.delete_keys_by_pattern(CacheKeys.StaticMaps.STATIC_MAP_STOP_DELETE_ALL_KEY_TEMPLATE)
-    await redis_service.delete_keys_by_pattern(CacheKeys.StopApi.DETAILED_DELETE_ALL_KEY_TEMPLATE)
-    await redis_service.delete_keys_by_pattern(CacheKeys.RealTime.REALTIME_ROUTE_DELETE_ALL_KEY_TEMPLATE)
+    async with await provide_redis_service() as redis_service:
+        await redis_service.delete_keys_by_pattern(CacheKeys.StopMaps.STOP_MAP_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(CacheKeys.StopMaps.STOP_MAP_NEARBY_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(CacheKeys.RouteMaps.ROUTE_MAP_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(CacheKeys.Schedules.SCHEDULE_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(
+            CacheKeys.StaticMaps.STATIC_MAP_AGENCY_ROUTE_DELETE_ALL_KEY_TEMPLATE
+        )
+        await redis_service.delete_keys_by_pattern(CacheKeys.StaticMaps.STATIC_MAP_STOP_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(CacheKeys.StopApi.DETAILED_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(CacheKeys.RealTime.REALTIME_ROUTE_DELETE_ALL_KEY_TEMPLATE)
 
     finish = time.perf_counter()
     console.print(f"\n[blue]Finished import in {round(finish - start, 2)} second(s)")
@@ -139,8 +139,8 @@ async def generate_database_statistics() -> float:
             )
             await statistics_service.update_all_statistics()
 
-    redis_service = await provide_redis_service()
-    await redis_service.delete_keys_by_pattern(CacheKeys.Statistics.STATISTICS_DELETE_ALL_KEY_TEMPLATE)
+    async with await provide_redis_service() as redis_service:
+        await redis_service.delete_keys_by_pattern(CacheKeys.Statistics.STATISTICS_DELETE_ALL_KEY_TEMPLATE)
 
     time_taken = round(time.perf_counter() - start, 2)
     await create_event_with_session(

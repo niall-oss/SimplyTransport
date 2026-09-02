@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import subprocess
 from collections import abc
@@ -23,6 +24,7 @@ TEST_ENV = {
     "REDIS_PORT": "16379",
     "REDIS_PASSWORD": "",
     "ENVIRONMENT": "TEST",
+    "GTFS_TFI_DATASET": "TFI",
 }
 
 
@@ -61,30 +63,65 @@ def _apply_test_env() -> None:
 
 
 def _seed_database() -> None:
+    from SimplyTransport.lib.db.database import get_async_engine, reset_engines
     from SimplyTransport.lib.db.services import create_database_sync
+    from SimplyTransport.lib.db.timescale_database import reset_timescale_engines
     from SimplyTransport.lib.gtfs_dataset import generate_database_statistics, import_gtfs_dataset
 
     create_database_sync()
     gtfs_dir = str(GTFS_FIXTURE_DIR).replace("\\", "/") + "/"
-    asyncio.run(import_gtfs_dataset(gtfs_dir))
-    asyncio.run(generate_database_statistics())
+
+    async def _seed() -> None:
+        from SimplyTransport.lib.gtfs_realtime_importers import RealTimeImporter
+
+        await import_gtfs_dataset(gtfs_dir)
+        await generate_database_statistics()
+        payload = json.loads((GTFS_FIXTURE_DIR / "realtime_e2e_trip_updates.json").read_text(encoding="utf-8"))
+        await RealTimeImporter(url="", api_key="", dataset="TFI").import_from_payload(payload)
+        await get_async_engine().dispose()
+
+    asyncio.run(_seed())
+    # Drop cached engines so TestClient does not reuse connections from the closed loop.
+    reset_engines()
+    reset_timescale_engines()
 
 
-@pytest.fixture(scope="session")
-def test_stack() -> abc.Iterator[None]:
+_stack_started = False
+
+
+def _start_stack() -> None:
+    global _stack_started
+    if _stack_started:
+        return
     _require_docker()
     up = _compose("up", "-d", "--wait")
     if up.returncode != 0:
         _compose("down", "-v")
         raise RuntimeError(f"Failed to start the integration test Docker stack.\n{up.stdout}\n{up.stderr}")
-    try:
-        _apply_test_env()
-        _seed_database()
-        yield
-    finally:
-        down = _compose("down", "-v")
-        if down.returncode != 0:
-            print(f"Failed to tear down the test stack:\n{down.stdout}\n{down.stderr}")
+    _stack_started = True
+    _apply_test_env()
+    _seed_database()
+
+
+def _stop_stack() -> None:
+    global _stack_started
+    if not _stack_started:
+        return
+    down = _compose("down", "-v")
+    _stack_started = False
+    if down.returncode != 0:
+        print(f"Failed to tear down the test stack:\n{down.stdout}\n{down.stderr}")
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    # Tear down after the whole pytest process, not when pytest-asyncio
+    # finalizes the session fixture (that can happen before tests run).
+    _stop_stack()
+
+
+@pytest.fixture(scope="session")
+def test_stack() -> None:
+    _start_stack()
 
 
 @pytest.fixture(scope="session")
