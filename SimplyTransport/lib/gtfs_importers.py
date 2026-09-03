@@ -19,7 +19,7 @@ from ..domain.stop.model import StopModel
 from ..domain.stop_times.model import StopTimeModel
 from ..domain.trip.model import TripModel
 from . import time_date_conversions as tdc
-from .db.database import async_session_factory, session
+from .db.database import async_session_factory, get_sync_session
 
 NUMBER_OF_CONSUMERS = 2
 QUEUE_MAXSIZE = 2
@@ -201,7 +201,7 @@ class AgencyImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(AgencyModel).filter(AgencyModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -265,7 +265,7 @@ class CalendarImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(CalendarModel).filter(CalendarModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -324,7 +324,7 @@ class CalendarDateImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(CalendarDateModel).filter(CalendarDateModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -384,7 +384,7 @@ class RouteImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(RouteModel).filter(RouteModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -441,7 +441,7 @@ class TripImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(TripModel).filter(TripModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -510,7 +510,7 @@ class StopImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(StopModel).filter(StopModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -568,7 +568,7 @@ class ShapeImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(ShapeModel).filter(ShapeModel.dataset == self.dataset).delete()
             session.commit()
 
@@ -646,6 +646,6 @@ class StopTimeImporter(AsyncImporter):
     def clear_table(self):
         """Clears the table in the database that corresponds to the file"""
 
-        with session:
+        with get_sync_session() as session:
             session.query(StopTimeModel).filter(StopTimeModel.dataset == self.dataset).delete()
             session.commit()

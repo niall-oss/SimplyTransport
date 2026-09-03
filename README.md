@@ -234,6 +234,7 @@ The application is containerized using Docker and can be run in both development
 │   └── otel-collector/
 │       └── docker-compose.yaml
 ├── docker-compose.dev.yaml
+├── docker-compose.test.yaml
 └── docker-compose.prod.yaml
 ```
 
@@ -479,12 +480,18 @@ SimplyTransport uses **structlog** with rich for readable console output. In **D
 
 SimplyTransport has **Integration** and **Unit** tests implemented using pytest.
 
-You can run the tests using the following command in the root directory.
-
-There is a small test dataset of GTFS data in the tests directory which is used for consistent testing.
+`pytest` is enough. Integration tests start their own Docker Compose stack (Postgres, TimescaleDB, Redis), load the GTFS fixture data from `tests/gtfs_test_data/TFI/`, then tear the stack down. Docker Desktop must be running. Unit tests do not need Docker:
 
 ```
 pytest
+pytest tests/unit
+pytest tests/integration
+```
+
+If a run is killed mid-suite, leftover containers can be removed with:
+
+```
+docker compose -p simplytransport-test -f docker-compose.test.yaml down -v
 ```
 
 or

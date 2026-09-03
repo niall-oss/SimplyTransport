@@ -21,14 +21,27 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from . import settings
 
 otel_log_handler: logging.Handler | None = None
+_configured = False
+
+open_telemetry_config = OpenTelemetryConfig()
+open_telemetry_plugin = OpenTelemetryPlugin(config=open_telemetry_config)
 
 
 def _otlp_base_url() -> str:
     return settings.app.OTEL_EXPORTER_OTLP_ENDPOINT.rstrip("/")
 
 
-# CI test envs skip OTLP so tests do not require a collector.
-if settings.app.ENVIRONMENT in ("DEV", "PROD"):
+def configure_opentelemetry() -> None:
+    """Enable OTel exporters in local dev and production. Safe to call more than once."""
+    global _configured, otel_log_handler
+    if _configured:
+        return
+    _configured = True
+
+    # Tests set ENVIRONMENT=TEST and should not export to a collector
+    if settings.app.ENVIRONMENT not in ("DEV", "PROD"):
+        return
+
     _base = _otlp_base_url()
     resource = Resource(
         attributes={
@@ -55,6 +68,3 @@ if settings.app.ENVIRONMENT in ("DEV", "PROD"):
     )
     otel_logs.set_logger_provider(_log_provider)
     otel_log_handler = LoggingHandler(level=logging.NOTSET, logger_provider=_log_provider)
-
-open_telemetry_config = OpenTelemetryConfig()
-open_telemetry_plugin = OpenTelemetryPlugin(config=open_telemetry_config)

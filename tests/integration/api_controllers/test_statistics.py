@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from litestar.testing import TestClient
 
@@ -26,7 +26,7 @@ def test_statistics_most_recent_operators(client: TestClient) -> None:
 
 
 def test_statistics_on_day(client: TestClient) -> None:
-    current_day = date.today().strftime("%Y-%m-%d")
+    current_day = datetime.now(UTC).date().isoformat()
     response = client.get(f"api/v1/statistics/gtfs.record.counts/{current_day}")
     assert response.status_code == 200
     response_json = response.json()

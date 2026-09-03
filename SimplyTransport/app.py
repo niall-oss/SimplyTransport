@@ -11,22 +11,23 @@ from .controllers import create_api_router, create_views_router
 from .lib import settings
 from .lib.cache import provide_redis_service, redis_service_cache_config_factory, redis_store_factory
 from .lib.compression import compression_config
-from .lib.db.database import sqlalchemy_plugin
+from .lib.db.database import create_sqlalchemy_plugin
 from .lib.logging.logging import logging_setup, logging_shutdown
 from .lib.openapi.openapiconfig import custom_open_api_config
-from .lib.opentelemetry import open_telemetry_plugin
+from .lib.opentelemetry import configure_opentelemetry, open_telemetry_plugin
 from .lib.parameters.limitoffset import provide_limit_offset_pagination
 from .lib.static_files import create_static_router
 from .lib.template_engine import custom_template_config
 
 
 def create_app() -> Litestar:
+    configure_opentelemetry()
     return Litestar(
         debug=settings.app.DEBUG,
         route_handlers=[create_views_router(), create_api_router(), create_static_router()],
         on_startup=[db_services.create_database_tables, logging_setup],
         on_shutdown=[logging_shutdown],
-        plugins=[sqlalchemy_plugin, CLIPlugin(), open_telemetry_plugin],
+        plugins=[create_sqlalchemy_plugin(), CLIPlugin(), open_telemetry_plugin],
         stores=StoreRegistry(default_factory=redis_store_factory),
         openapi_config=custom_open_api_config(),
         template_config=custom_template_config(),
@@ -41,9 +42,5 @@ def create_app() -> Litestar:
     )
 
 
-app = create_app()
-
 if __name__ == "__main__":
-    uvicorn.run(
-        app,
-    )
+    uvicorn.run(create_app())

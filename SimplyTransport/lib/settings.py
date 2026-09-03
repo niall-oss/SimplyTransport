@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -60,4 +64,28 @@ class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=(".env"), extra="ignore")
 
 
-app = AppSettings()
+_app: AppSettings | None = None
+
+
+def get_settings() -> AppSettings:
+    """Return cached settings, created on first use from the current environment."""
+    global _app
+    if _app is None:
+        _app = AppSettings()
+    return _app
+
+
+def reset_settings() -> None:
+    """Drop cached settings so the next access re-reads the environment."""
+    global _app
+    _app = None
+
+
+def __getattr__(name: str) -> AppSettings:
+    if name == "app":
+        return get_settings()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+if TYPE_CHECKING:
+    app = AppSettings()

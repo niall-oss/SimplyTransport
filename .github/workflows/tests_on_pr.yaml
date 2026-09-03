@@ -14,45 +14,8 @@ jobs:
         python-version: ["3.14.3"]
 
     env:
-      ENVIRONMENT: PR-TEST-CI
+      ENVIRONMENT: TEST
       GTFS_TFI_DATASET: TFI
-
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 20
-        ports:
-          - 5432:5432
-
-      redis:
-        image: redis
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 1s
-          --health-timeout 2s
-          --health-retries 20
-        ports:
-          - 6379:6379
-
-      timescale:
-        image: timescale/timescaledb:latest-pg16
-        env:
-          POSTGRES_USER: ${{ secrets.TIMESCALE_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.TIMESCALE_PASSWORD }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 1s
-          --health-timeout 2s
-          --health-retries 20
-        ports:
-          - 5433:5432
 
     steps:
       - name: Checkout code
@@ -69,40 +32,6 @@ jobs:
 
       - name: Install dependencies
         run: uv pip install -r requirements-top-level.txt
-
-      - name: Running sql scripts MAIN
-        run: |
-          for file in sql_scripts/main/*.sql; do
-            if ! psql -h localhost -p 5432 -U ${{ secrets.POSTGRES_USER }} -d postgres -a -f "$file"; then
-                echo "Failed to run $file"
-                exit 1
-            fi
-          done
-        env:
-          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-
-      - name: Running sql scripts TIMESCALE
-        run: |
-          for file in sql_scripts/timescale/*.sql; do
-            if ! psql -h localhost -p 5433 -U ${{ secrets.TIMESCALE_USER }} -d postgres -a -f "$file"; then
-                echo "Failed to run $file"
-                exit 1
-            fi
-          done
-        env:
-          PGPASSWORD: ${{ secrets.TIMESCALE_PASSWORD }}
-
-      - name: Create database tables
-        run: LITESTAR_APP=SimplyTransport.app:create_app litestar create_tables
-
-      - name: Populate GTFS test data
-        run: echo "y" | LITESTAR_APP=SimplyTransport.app:create_app litestar importgtfs -dir ./tests/gtfs_test_data/TFI/
-
-      - name: Populate Statistics
-        run: LITESTAR_APP=SimplyTransport.app:create_app litestar generatestatistics
-
-      - name: Seed realtime E2E fixtures
-        run: LITESTAR_APP=SimplyTransport.app:create_app litestar seedrealtimefromfile --file ./tests/gtfs_test_data/TFI/realtime_e2e_trip_updates.json
 
       - name: Install dev dependencies
         run: uv pip install -r requirements-dev.txt

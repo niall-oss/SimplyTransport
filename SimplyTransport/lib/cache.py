@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from collections.abc import Iterable, Sequence
 from datetime import datetime
@@ -72,6 +74,12 @@ class RedisService:
     def __init__(self, default_expiration: int = 60) -> None:
         self.redis = redis_factory()
         self.default_expiration = default_expiration
+
+    async def __aenter__(self) -> RedisService:
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        await self.redis.aclose()
 
     async def delete_keys_by_pattern(self, pattern: StrEnum) -> None:
         """
