@@ -32,7 +32,8 @@
                     {% set on_time_style = "color-unknown" %}
                 {% endif %}
                 <td class="dense-text no-pointer bold-highlight {{ on_time_style }}">
-                    <span class="code-highlight">{{ rt.static_schedule.route.short_name }}</span>
+                    <span class="code-highlight{% if rt.static_schedule.is_added_exception %} code-highlight-extra{% endif %}"
+                          {% if rt.static_schedule.is_added_exception %}title="Service added"{% endif %}>{{ rt.static_schedule.route.short_name }}{% if rt.static_schedule.is_added_exception %}+{% endif %}</span>
                 </td>
                 <td class="dense-text no-pointer">
                     <a class="no-underline"
@@ -63,5 +64,6 @@
     <span class="popuptext" id="copyPopup" onclick="hidePopup()">Table copied to clipboard ✅</span>
     <div class="colors-legend dense-text">
         <span class="color-early">&nbsp;Early</span><span class="color-on-time">&nbsp;On Time</span><span class="color-late">&nbsp;Late</span><span class="color-unknown">&nbsp;Unknown</span>
+        {% if has_extra_service %}<span class="code-highlight-extra">&nbsp;+ service added</span>{% endif %}
     </div>
 </div>

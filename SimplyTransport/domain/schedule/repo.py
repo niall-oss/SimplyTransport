@@ -14,6 +14,22 @@ from ..trip.model import TripModel
 from .model import StaticScheduleModel
 
 
+def _arrival_time_conditions(start_time: time | None, end_time: time | None) -> list[Any]:
+    if not (start_time and end_time):
+        return []
+    if start_time > end_time:
+        return [
+            or_(
+                StopTimeModel.arrival_time >= start_time,
+                StopTimeModel.arrival_time <= end_time,
+            )
+        ]
+    return [
+        StopTimeModel.arrival_time >= start_time,
+        StopTimeModel.arrival_time <= end_time,
+    ]
+
+
 def _static_schedule_from_row(row: Any) -> StaticScheduleModel:
     stop_time, route, calendar, stop, trip = row
     return StaticScheduleModel(
@@ -22,6 +38,7 @@ def _static_schedule_from_row(row: Any) -> StaticScheduleModel:
         calendar=calendar,
         stop=stop,
         trip=trip,
+        is_added_exception=False,
     )
 
 
@@ -79,18 +96,32 @@ class ScheduleRepository:
         if trips:
             conditions.append(TripModel.id.in_(trips))
 
-        if start_time and end_time:
-            if start_time > end_time:
-                conditions.append(
-                    or_(
-                        StopTimeModel.arrival_time >= start_time,
-                        StopTimeModel.arrival_time <= end_time,
-                    )
-                )
-            else:
-                conditions.append(StopTimeModel.arrival_time >= start_time)
-                conditions.append(StopTimeModel.arrival_time <= end_time)
+        conditions.extend(_arrival_time_conditions(start_time, end_time))
 
+        return await self._execute_static_schedules(conditions)
+
+    async def get_static_schedules_for_service_ids(
+        self,
+        service_ids: list[str],
+        stop_id: str | None = None,
+        start_time: time | None = None,
+        end_time: time | None = None,
+        trips: list[str] | None = None,
+    ) -> list[StaticScheduleModel]:
+        """Retrieve static schedules for service_ids, ignoring weekday flags."""
+        if not service_ids:
+            return []
+
+        conditions: list[Any] = [CalendarModel.id.in_(service_ids)]
+        if stop_id:
+            conditions.append(StopModel.id == stop_id)
+        if trips:
+            conditions.append(TripModel.id.in_(trips))
+        conditions.extend(_arrival_time_conditions(start_time, end_time))
+
+        return await self._execute_static_schedules(conditions)
+
+    async def _execute_static_schedules(self, conditions: list[Any]) -> list[StaticScheduleModel]:
         statement = (
             select(StopTimeModel, RouteModel, CalendarModel, StopModel, TripModel)
             .join(TripModel, TripModel.id == StopTimeModel.trip_id)
@@ -102,7 +133,6 @@ class ScheduleRepository:
             )
             .order_by(StopTimeModel.arrival_time)
         )
-
         result = await self.session.execute(statement)
         return [_static_schedule_from_row(row) for row in result]
 

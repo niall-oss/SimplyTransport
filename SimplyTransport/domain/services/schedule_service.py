@@ -16,7 +16,7 @@ class ScheduleService:
         calendar_date_repository: CalendarDateRepository,
     ):
         self.schedule_repository = schedule_repository
-        self.calendar_date_respository = calendar_date_repository
+        self.calendar_date_repository = calendar_date_repository
 
     async def get_schedule_on_stop_for_day(self, stop_id: str, day: DayOfWeek) -> list[StaticScheduleModel]:
         """Returns a list of schedules for the given stop and day"""
@@ -58,18 +58,15 @@ class ScheduleService:
         return sorted_schedules
 
     async def remove_exceptions_and_inactive_calendars(
-        self, static_schedules: list[StaticScheduleModel]
+        self, static_schedules: list[StaticScheduleModel], on_date: date
     ) -> list[StaticScheduleModel]:
-        """Removes exceptions from the list of schedules"""
-        current_day = date.today()
-        exceptions_from_db = await self.calendar_date_respository.get_removed_exceptions_on_date(
-            date=current_day
-        )
+        """Drop regular service that is inactive or removed on on_date."""
+        exceptions_from_db = await self.calendar_date_repository.get_removed_exceptions_on_date(date=on_date)
         removed_exception_service_ids = {exc.service_id for exc in exceptions_from_db}
 
         static_schedules_filtered = []
         for schedule in static_schedules:
-            if not schedule.true_if_active(date=current_day):
+            if not schedule.is_active_on_date(date=on_date):
                 continue
             if schedule.calendar.id in removed_exception_service_ids:
                 continue
@@ -78,12 +75,41 @@ class ScheduleService:
         return static_schedules_filtered
 
     async def add_in_added_exceptions(
-        self, static_schedules: list[StaticScheduleModel]
+        self,
+        static_schedules: list[StaticScheduleModel],
+        *,
+        on_date: date,
+        stop_id: str | None = None,
+        start_time: time | None = None,
+        end_time: time | None = None,
+        trips: list[str] | None = None,
     ) -> list[StaticScheduleModel]:
-        """Adds in added exceptions from the list of schedules"""
-        pass  # TODO
+        """Append trips that calendar_dates adds on on_date."""
+        added_exceptions = await self.calendar_date_repository.get_added_exceptions_on_date(date=on_date)
+        if not added_exceptions:
+            return static_schedules
 
-        return static_schedules
+        added_service_ids = {exc.service_id for exc in added_exceptions}
+        extra_schedules = await self.schedule_repository.get_static_schedules_for_service_ids(
+            service_ids=list(added_service_ids),
+            stop_id=stop_id,
+            start_time=start_time,
+            end_time=end_time,
+            trips=trips,
+        )
+
+        existing_keys = {
+            (schedule.trip.id, schedule.stop_time.stop_sequence) for schedule in static_schedules
+        }
+        extras: list[StaticScheduleModel] = []
+        for schedule in extra_schedules:
+            key = (schedule.trip.id, schedule.stop_time.stop_sequence)
+            if key in existing_keys:
+                continue
+            schedule.is_added_exception = True
+            extras.append(schedule)
+
+        return static_schedules + extras
 
     async def get_by_trip_id(self, trip_id: str) -> list[StaticScheduleModel]:
         """Returns a list of schedules for the given trip_id"""

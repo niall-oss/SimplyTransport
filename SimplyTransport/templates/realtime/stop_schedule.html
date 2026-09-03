@@ -18,7 +18,8 @@
                              alt="Link Icon"
                              width="13"
                              height="13">
-                    </a><span class="code-highlight">{{ schedule.route.short_name }}</span>
+                    </a><span class="code-highlight{% if schedule.is_added_exception %} code-highlight-extra{% endif %}"
+                          {% if schedule.is_added_exception %}title="Service added"{% endif %}>{{ schedule.route.short_name }}{% if schedule.is_added_exception %}+{% endif %}</span>
                 </td>
                 <td class="dense-text no-pointer">
                     <a class="no-underline" href="/realtime/trip/{{ schedule.trip.id }}">
@@ -33,6 +34,9 @@
         {% endfor %}
     </tbody>
 </table>
+{% if has_extra_service %}
+    <p class="dense-text">+ service added</p>
+{% endif %}
 <script>
 document.querySelectorAll(".table-sortable th").forEach((headerCell) => {
   headerCell.addEventListener("click", () => {

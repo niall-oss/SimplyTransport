@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import rich.progress as rp
 from SimplyTransport.domain.realtime.realtime_schedule.model import RealTimeScheduleModel
@@ -70,9 +70,18 @@ class DelaysService:
         )
         logger.info(f"Found {len(schedules)} schedules.")
 
-        schedules = await self.schedule_service.remove_exceptions_and_inactive_calendars(schedules)
+        on_date = date.today()
+        schedules = await self.schedule_service.remove_exceptions_and_inactive_calendars(
+            schedules, on_date=on_date
+        )
         logger.info(f"Removed exceptions and inactive calendars. {len(schedules)} schedules remaining.")
-        schedules = await self.schedule_service.add_in_added_exceptions(schedules)  # TODO
+        schedules = await self.schedule_service.add_in_added_exceptions(
+            schedules,
+            on_date=on_date,
+            start_time=start_time.time(),
+            end_time=end_time.time(),
+            trips=realtime_trip_ids,
+        )
 
         async def gather_realtime_schedules(
             schedules: Sequence[StaticScheduleModel],

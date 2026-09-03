@@ -1,10 +1,12 @@
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 import pytest
 from litestar.exceptions import ValidationException
+from SimplyTransport.domain.enums import DayOfWeek
 from SimplyTransport.lib.time_date_conversions import (
     convert_29_hours_to_24_hours,
     convert_joined_date_to_date,
+    next_date_for_day,
     return_time_difference,
     validate_time_range,
 )
@@ -90,3 +92,15 @@ def test_validate_time_range_no_exception(start_time, end_time):
 def test_validate_time_range_exception(start_time, end_time):
     with pytest.raises(ValidationException):
         validate_time_range(start_time, end_time)
+
+
+def test_next_date_for_day_same_weekday():
+    assert next_date_for_day(DayOfWeek.WEDNESDAY, from_date=date(2021, 6, 30)) == date(2021, 6, 30)
+
+
+def test_next_date_for_day_later_in_week():
+    assert next_date_for_day(DayOfWeek.SATURDAY, from_date=date(2021, 6, 30)) == date(2021, 7, 3)
+
+
+def test_next_date_for_day_wraps_to_next_week():
+    assert next_date_for_day(DayOfWeek.MONDAY, from_date=date(2021, 6, 30)) == date(2021, 7, 5)

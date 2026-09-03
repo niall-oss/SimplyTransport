@@ -24,6 +24,7 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_no_change_no
                 calendar=AsyncMock(),
                 stop=AsyncMock(),
                 trip=AsyncMock(),
+                is_added_exception=False,
             )
         ),
         RealTimeScheduleModel(
@@ -33,6 +34,7 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_no_change_no
                 calendar=AsyncMock(),
                 stop=AsyncMock(),
                 trip=AsyncMock(),
+                is_added_exception=False,
             )
         ),
         RealTimeScheduleModel(
@@ -42,6 +44,7 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_no_change_no
                 calendar=AsyncMock(),
                 stop=AsyncMock(),
                 trip=AsyncMock(),
+                is_added_exception=False,
             )
         ),
     ]
@@ -74,6 +77,7 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_backwards():
                 calendar=AsyncMock(),
                 stop=AsyncMock(),
                 trip=AsyncMock(),
+                is_added_exception=False,
             )
         ),
         RealTimeScheduleModel(
@@ -83,6 +87,7 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_backwards():
                 calendar=AsyncMock(),
                 stop=AsyncMock(),
                 trip=AsyncMock(),
+                is_added_exception=False,
             )
         ),
         RealTimeScheduleModel(
@@ -92,6 +97,7 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_backwards():
                 calendar=AsyncMock(),
                 stop=AsyncMock(),
                 trip=AsyncMock(),
+                is_added_exception=False,
             )
         ),
     ]
@@ -121,6 +127,7 @@ async def test_get_realtime_schedules_matches_per_stop_stop_time():
         calendar=AsyncMock(),
         stop=AsyncMock(id="S1"),
         trip=AsyncMock(id="T1", dataset="TFI"),
+        is_added_exception=False,
     )
     rt_trip = SimpleNamespace(
         trip_id="T1",
@@ -166,6 +173,7 @@ async def test_get_realtime_schedules_trip_removed_without_stop_time_row():
         calendar=AsyncMock(),
         stop=AsyncMock(id="S1"),
         trip=AsyncMock(id="T1", dataset="TFI"),
+        is_added_exception=False,
     )
     rt_trip = SimpleNamespace(
         trip_id="T1",
@@ -197,6 +205,7 @@ async def test_get_realtime_schedules_exact_skipped_stop():
         calendar=AsyncMock(),
         stop=AsyncMock(id="S10"),
         trip=AsyncMock(id="T1", dataset="TFI"),
+        is_added_exception=False,
     )
     rt_st = SimpleNamespace(
         trip_id="T1",
@@ -236,6 +245,7 @@ async def test_get_realtime_schedules_non_exact_skipped_predecessor_not_shown_as
         calendar=AsyncMock(),
         stop=AsyncMock(id="S10"),
         trip=AsyncMock(id="T1", dataset="TFI"),
+        is_added_exception=False,
     )
     rt_st = SimpleNamespace(
         trip_id="T1",
