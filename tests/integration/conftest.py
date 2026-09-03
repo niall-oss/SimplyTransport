@@ -4,12 +4,14 @@ import asyncio
 import json
 import os
 import subprocess
-from collections import abc
+from collections.abc import AsyncIterator
+from datetime import datetime, time, timedelta
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from litestar import Litestar
-from litestar.testing import AsyncTestClient, TestClient
+from litestar.testing import AsyncTestClient
 
 COMPOSE_PROJECT = "simplytransport-test"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -92,6 +94,40 @@ def _wait_for_stack() -> None:
     asyncio.run(_wait_both())
 
 
+async def _seed_delay_rows() -> None:
+    from SimplyTransport.lib.db.timescale_database import async_timescale_session_factory
+    from SimplyTransport.timescale.ts_stop_times.model import TS_StopTimeModel
+
+    now = datetime.now()
+    async with async_timescale_session_factory() as session:
+        session.add_all(
+            [
+                TS_StopTimeModel(
+                    Timestamp=now - timedelta(days=1),
+                    stop_id="8240DB000324",
+                    route_code="4",
+                    scheduled_time=time(8, 0, 0),
+                    delay_in_seconds=120,
+                ),
+                TS_StopTimeModel(
+                    Timestamp=now - timedelta(days=2),
+                    stop_id="8240DB000324",
+                    route_code="4",
+                    scheduled_time=time(8, 0, 0),
+                    delay_in_seconds=60,
+                ),
+                TS_StopTimeModel(
+                    Timestamp=now - timedelta(days=3),
+                    stop_id="8240DB000324",
+                    route_code="4",
+                    scheduled_time=time(8, 0, 0),
+                    delay_in_seconds=180,
+                ),
+            ]
+        )
+        await session.commit()
+
+
 def _seed_database() -> None:
     from SimplyTransport.lib.db.database import get_async_engine, reset_engines
     from SimplyTransport.lib.db.services import create_database_tables
@@ -101,6 +137,7 @@ def _seed_database() -> None:
     gtfs_dir = str(GTFS_FIXTURE_DIR).replace("\\", "/") + "/"
 
     async def _seed() -> None:
+        import SimplyTransport.timescale  # noqa: F401
         from SimplyTransport.lib.gtfs_realtime_importers import RealTimeImporter
 
         await create_database_tables()
@@ -110,10 +147,11 @@ def _seed_database() -> None:
             (GTFS_FIXTURE_DIR / "realtime_e2e_trip_updates.json").read_text(encoding="utf-8")
         )
         await RealTimeImporter(url="", api_key="", dataset="TFI").import_from_payload(payload)
+        await _seed_delay_rows()
         await get_async_engine().dispose()
 
     asyncio.run(_seed())
-    # Drop cached engines so TestClient does not reuse connections from the closed loop.
+    # Drop cached engines so the test client does not reuse connections from the closed loop.
     reset_engines()
     reset_timescale_engines()
 
@@ -179,20 +217,7 @@ def app(test_stack: None) -> Litestar:
     return create_app()
 
 
-@pytest.fixture(scope="session")
-def async_client(app: Litestar) -> AsyncTestClient:
-    return AsyncTestClient(app=app)
-
-
-@pytest.fixture(scope="session")
-def client(app: Litestar) -> abc.Iterator[TestClient]:
-    """Client instance attached to app.
-
-    Args:
-        app: The app for testing.
-
-    Returns:
-        Test client instance.
-    """
-    with TestClient(app=app) as c:
-        yield c
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def async_client(app: Litestar) -> AsyncIterator[AsyncTestClient]:
+    async with AsyncTestClient(app=app) as client:
+        yield client

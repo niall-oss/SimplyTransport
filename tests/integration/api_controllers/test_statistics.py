@@ -1,41 +1,38 @@
 from datetime import UTC, datetime
 
-from litestar.testing import TestClient
+import pytest
+from litestar.testing import AsyncTestClient
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_statistics_most_recent_gtfs(client: TestClient) -> None:
-    response = client.get("api/v1/statistics/gtfs.record.counts")
+async def test_statistics_most_recent_returns_gtfs_counts(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/statistics/gtfs.record.counts")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 9
+    rows = response.json()
+    assert len(rows) == 9
+    assert all(row["statistic_type"] == "gtfs.record.counts" for row in rows)
+    assert "key" in rows[0]
+    assert isinstance(rows[0]["value"], int)
 
-    for i in range(0, len(response_json)):
-        assert response_json[i]["statistic_type"] == "gtfs.record.counts"
 
-
-def test_statistics_most_recent_operators(client: TestClient) -> None:
-    response = client.get("api/v1/statistics/operator.route.counts")
+async def test_statistics_most_recent_returns_operator_route_counts(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/statistics/operator.route.counts")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 1  # 1 is the number of operators in the test database with at least 1 route
-    # with statistics on a fresh database.
-    # This is will fail locally if you have existing statistics in your DB.
-
-    for i in range(0, len(response_json)):
-        assert response_json[i]["statistic_type"] == "operator.route.counts"
+    rows = response.json()
+    assert len(rows) == 1
+    assert rows[0]["statistic_type"] == "operator.route.counts"
 
 
-def test_statistics_on_day(client: TestClient) -> None:
+async def test_statistics_on_day_returns_gtfs_counts(async_client: AsyncTestClient) -> None:
     current_day = datetime.now(UTC).date().isoformat()
-    response = client.get(f"api/v1/statistics/gtfs.record.counts/{current_day}")
+    response = await async_client.get(f"api/v1/statistics/gtfs.record.counts/{current_day}")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 9
-
-    for i in range(0, len(response_json)):
-        assert response_json[i]["statistic_type"] == "gtfs.record.counts"
+    rows = response.json()
+    assert len(rows) == 9
+    assert all(row["statistic_type"] == "gtfs.record.counts" for row in rows)
 
 
-def test_statistics_on_day_404(client: TestClient) -> None:
-    response = client.get("api/v1/statistics/gtfs.record.counts/2021-01-01")
+async def test_statistics_on_day_returns_404_when_none(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/statistics/gtfs.record.counts/2021-01-01")
     assert response.status_code == 404

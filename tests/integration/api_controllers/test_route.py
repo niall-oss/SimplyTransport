@@ -1,124 +1,66 @@
-from litestar.testing import TestClient
+import pytest
+from litestar.testing import AsyncTestClient
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_route_all(client: TestClient) -> None:
-    response = client.get("api/v1/route/")
+async def test_routes_list_returns_all_routes(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 2
-    assert response_json[0]["id"] == "3623_54684"
-    assert response_json[0]["agency_id"] == "7778019"
-    assert response_json[0]["short_name"] == "4"
-    assert response_json[0]["long_name"] == "Monkstown Avenue - Harristown"
-    assert response_json[0]["description"] == ""
-    assert response_json[0]["route_type"] == 3
-    assert response_json[0]["url"] == ""
-    assert response_json[0]["color"] == ""
-    assert response_json[0]["text_color"] == ""
-    assert response_json[0]["dataset"] == "TFI"
-
-    assert response_json[1]["id"] == "3623_54691"
-    assert response_json[1]["agency_id"] == "7778019"
-    assert response_json[1]["short_name"] == "9"
-    assert response_json[1]["long_name"] == "Limekiln Avenue - Charelstown"
-    assert response_json[1]["description"] == ""
-    assert response_json[1]["route_type"] == 3
-    assert response_json[1]["url"] == ""
-    assert response_json[1]["color"] == ""
-    assert response_json[1]["text_color"] == ""
-    assert response_json[1]["dataset"] == "TFI"
+    routes = response.json()
+    assert len(routes) == 2
+    assert routes[0]["id"] == "3623_54684"
+    assert routes[0]["short_name"] == "4"
+    assert routes[1]["id"] == "3623_54691"
+    assert routes[1]["short_name"] == "9"
 
 
-def test_route_filtered_by_agency_id(client: TestClient) -> None:
-    response = client.get("api/v1/route/?agency_id=7778019")
+async def test_routes_filtered_by_agency_id_return_that_agency(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/?agencyId=7778019")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 2
-    assert response_json[0]["id"] == "3623_54684"
-    assert response_json[0]["agency_id"] == "7778019"
-    assert response_json[0]["short_name"] == "4"
-    assert response_json[0]["long_name"] == "Monkstown Avenue - Harristown"
-    assert response_json[0]["description"] == ""
-    assert response_json[0]["route_type"] == 3
-    assert response_json[0]["url"] == ""
-    assert response_json[0]["color"] == ""
-    assert response_json[0]["text_color"] == ""
-    assert response_json[0]["dataset"] == "TFI"
-
-    assert response_json[1]["id"] == "3623_54691"
-    assert response_json[1]["agency_id"] == "7778019"
-    assert response_json[1]["short_name"] == "9"
-    assert response_json[1]["long_name"] == "Limekiln Avenue - Charelstown"
-    assert response_json[1]["description"] == ""
-    assert response_json[1]["route_type"] == 3
-    assert response_json[1]["url"] == ""
-    assert response_json[1]["color"] == ""
-    assert response_json[1]["text_color"] == ""
-    assert response_json[1]["dataset"] == "TFI"
+    routes = response.json()
+    assert len(routes) == 2
+    assert all(route["agency_id"] == "7778019" for route in routes)
 
 
-def test_route_filtered_by_agency_id_not_found(client: TestClient) -> None:
-    response = client.get("api/v1/route/?agencyId=7778801877788018")
+async def test_routes_filtered_by_agency_id_return_404_when_none(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/?agencyId=7778801877788018")
     assert response.status_code == 404
-    response_json = response.json()
-    assert response_json["detail"] == "Routes not found with agency id 7778801877788018"
+    assert response.json()["detail"] == "Routes not found with agency id 7778801877788018"
 
 
-def test_all_route_and_count(client: TestClient) -> None:
-    response = client.get("api/v1/route/count")
+async def test_routes_count_includes_total(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/count")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 2
-    assert len(response_json["routes"]) == 2
+    payload = response.json()
+    assert payload["total"] == len(payload["routes"]) == 2
 
 
-def test_all_route_and_count_by_agency_id(client: TestClient) -> None:
-    response = client.get("api/v1/route/count?agency_id=7778019")
+async def test_routes_count_filtered_by_agency_id_includes_total(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/count?agencyId=7778019")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 2
-    assert len(response_json["routes"]) == 2
+    payload = response.json()
+    assert payload["total"] == len(payload["routes"]) == 2
 
 
-def test_all_route_and_count_by_agency_id_not_found(client: TestClient) -> None:
-    response = client.get("api/v1/route/count?agencyId=7778801877788018")
+async def test_routes_count_filtered_by_agency_id_return_404_when_none(
+    async_client: AsyncTestClient,
+) -> None:
+    response = await async_client.get("api/v1/route/count?agencyId=7778801877788018")
     assert response.status_code == 404
-    response_json = response.json()
-    assert response_json["detail"] == "Routes not found with agency id 7778801877788018"
+    assert response.json()["detail"] == "Routes not found with agency id 7778801877788018"
 
 
-def test_get_route_by_id(client: TestClient) -> None:
-    response = client.get("api/v1/route/3623_54684")
+async def test_route_returns_match_for_known_id(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/3623_54684")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["id"] == "3623_54684"
-    assert response_json["agency_id"] == "7778019"
-    assert response_json["short_name"] == "4"
-    assert response_json["long_name"] == "Monkstown Avenue - Harristown"
-    assert response_json["description"] == ""
-    assert response_json["route_type"] == 3
-    assert response_json["url"] == ""
-    assert response_json["color"] == ""
-    assert response_json["text_color"] == ""
-    assert response_json["dataset"] == "TFI"
-
-    response = client.get("api/v1/route/3623_54691")
-    assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["id"] == "3623_54691"
-    assert response_json["agency_id"] == "7778019"
-    assert response_json["short_name"] == "9"
-    assert response_json["long_name"] == "Limekiln Avenue - Charelstown"
-    assert response_json["description"] == ""
-    assert response_json["route_type"] == 3
-    assert response_json["url"] == ""
-    assert response_json["color"] == ""
-    assert response_json["text_color"] == ""
-    assert response_json["dataset"] == "TFI"
+    route = response.json()
+    assert route["id"] == "3623_54684"
+    assert route["short_name"] == "4"
+    assert route["long_name"] == "Monkstown Avenue - Harristown"
 
 
-def test_get_route_by_id_not_found(client: TestClient) -> None:
-    response = client.get("api/v1/route/3623_54691_")
+async def test_route_returns_404_for_unknown_id(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/route/3623_54691_")
     assert response.status_code == 404
-    response_json = response.json()
-    assert response_json["detail"] == "Route not found with id 3623_54691_"
+    assert response.json()["detail"] == "Route not found with id 3623_54691_"

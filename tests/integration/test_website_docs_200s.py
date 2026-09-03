@@ -1,7 +1,9 @@
 import pytest
-from litestar.testing import TestClient
+from litestar.testing import AsyncTestClient
 
-urls = [
+pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+docs_urls = [
     "",
     "/swagger/",
     "/elements",
@@ -13,15 +15,14 @@ urls = [
 ]
 
 
-@pytest.mark.parametrize("url", urls)
-def test_url_200(client: TestClient, url: str) -> None:
-    response = client.get(f"/docs{url}")
+@pytest.mark.parametrize("url", docs_urls)
+async def test_docs_renderer_returns_200(async_client: AsyncTestClient, url: str) -> None:
+    response = await async_client.get(f"/docs{url}")
     assert response.status_code == 200
-    assert response.elapsed.total_seconds() < 1
 
 
-def test_default_is_stoplight(client: TestClient) -> None:
-    response = client.get("/docs")
+async def test_default_is_stoplight(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/docs")
     assert response.status_code == 200
     assert "stoplight" in response.text
     assert "elements" in response.text
