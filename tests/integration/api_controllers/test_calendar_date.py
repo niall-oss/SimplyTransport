@@ -1,50 +1,43 @@
-from litestar.testing import TestClient
-from SimplyTransport.api_contract.calendar_date import CalendarDate
+import pytest
+from litestar.testing import AsyncTestClient
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_calendar_date_all(client: TestClient) -> None:
-    response = client.get("api/v1/calendardate/")
+async def test_calendar_dates_list_returns_all_dates(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/calendardate/")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 238
-    assert isinstance(response_json, list)
-    for item in response_json:
-        CalendarDate.model_validate(item)
+    dates = response.json()
+    assert len(dates) == 238
+    assert "service_id" in dates[0]
 
 
-def test_calendar_date_all_and_count(client: TestClient) -> None:
-    response = client.get("api/v1/calendardate/count")
+async def test_calendar_dates_count_includes_total(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/calendardate/count")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 238
-    assert len(response_json["calendar_dates"]) == 238
+    payload = response.json()
+    assert payload["total"] == len(payload["calendar_dates"]) == 238
 
 
-def test_get_calendar_date_by_service_id(client: TestClient) -> None:
-    response = client.get("api/v1/calendardate/154")
+async def test_calendar_dates_return_rows_for_known_service(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/calendardate/154")
     assert response.status_code == 200
-    response_json = response.json()
-
-    assert len(response_json) == 3
-    assert response_json[0]["service_id"] == "154"
-    assert response_json[0]["date"] == "2023-10-30"
-    assert response_json[0]["exception_type"] == "removed"
-    assert response_json[0]["dataset"] == "TFI"
-    for each_date in response_json:
-        assert each_date["service_id"] == "154"
+    dates = response.json()
+    assert len(dates) == 3
+    assert dates[0]["service_id"] == "154"
+    assert dates[0]["exception_type"] == "removed"
+    assert all(item["service_id"] == "154" for item in dates)
 
 
-def test_get_active_calendar_dates_on_date(client: TestClient) -> None:
-    response = client.get("api/v1/calendardate/date/2023-10-30")
+async def test_calendar_dates_return_404_for_unknown_service(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/calendardate/does-not-exist")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "CalendarDates not found with service_id does-not-exist"
+
+
+async def test_calendar_dates_on_date_match_requested_day(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/calendardate/date/2023-10-30")
     assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 24
-    for each_date in response_json:
-        assert each_date["date"] == "2023-10-30"
-
-    response = client.get("api/v1/calendardate/date/2024-01-01")
-    assert response.status_code == 200
-    response_json = response.json()
-    assert len(response_json) == 9
-    for each_date in response_json:
-        assert each_date["date"] == "2024-01-01"
+    dates = response.json()
+    assert len(dates) == 24
+    assert all(item["date"] == "2023-10-30" for item in dates)

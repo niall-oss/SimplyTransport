@@ -2,10 +2,11 @@ import pytest
 from litestar.testing import AsyncTestClient
 from SimplyTransport.lib.constants import STATIC_DIR
 
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
-@pytest.mark.asyncio
+
 @pytest.mark.parametrize(
-    "filename, content_type",
+    ("filename", "content_type"),
     [
         ("favicon.ico", "image/vnd.microsoft.icon"),
         ("site.webmanifest", "application/manifest+json"),
@@ -23,13 +24,11 @@ async def test_static_file_on_root(filename: str, content_type: str, async_clien
     assert response.headers["content-type"] == content_type
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "filename, content_type",
+    ("filename", "content_type"),
     [
         ("event.css", "text/css; charset=utf-8"),
         ("style.css", "text/css; charset=utf-8"),
-        # ("tablesort.js", "application/javascript; charset=utf-8"),
         ("loader.svg", "image/svg+xml"),
         ("simply_transport_logo.svg", "image/svg+xml"),
     ],
@@ -40,7 +39,6 @@ async def test_static_file_in_static(filename: str, content_type: str, async_cli
     assert response.headers["content-type"] == content_type
 
 
-@pytest.mark.asyncio
 async def test_static_files_have_max_age_header(async_client: AsyncTestClient) -> None:
     response = await async_client.get(f"/{STATIC_DIR}/loader.svg")
     assert response.status_code == 200

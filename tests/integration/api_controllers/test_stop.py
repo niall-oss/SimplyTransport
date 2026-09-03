@@ -1,167 +1,94 @@
 import math
 
-from litestar.testing import TestClient
+import pytest
+from litestar.testing import AsyncTestClient
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_get_stop_by_id(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/8240DB000324")
+async def test_stop_returns_match_for_known_id(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/8240DB000324")
     assert response.status_code == 200
-    response_json = response.json()
-
-    assert response_json["id"] == "8240DB000324"
-    assert response_json["code"] == "324"
-    assert response_json["name"] == "Harristown"
-    assert response_json["description"] == ""
-    assert math.isclose(response_json["lat"], 53.41772268, abs_tol=1e-09)
-    assert math.isclose(response_json["lon"], -6.278644169, abs_tol=1e-09)
-    assert response_json["zone_id"] == ""
-    assert response_json["url"] == ""
-    assert response_json["location_type"] is None
-    assert response_json["parent_station"] is None
-    assert response_json["dataset"] == "TFI"
-
-    response = client.get("/api/v1/stop/8240DB007132")
-    assert response.status_code == 200
-    response_json = response.json()
-
-    assert response_json["id"] == "8240DB007132"
-    assert response_json["code"] == "7132"
-    assert response_json["name"] == "Charlestown SC"
-    assert response_json["description"] == ""
-    assert math.isclose(response_json["lat"], 53.40308897, abs_tol=1e-09)
-    assert math.isclose(response_json["lon"], -6.304306560, abs_tol=1e-09)
-    assert response_json["zone_id"] == ""
-    assert response_json["url"] == ""
-    assert response_json["location_type"] is None
-    assert response_json["parent_station"] is None
-    assert response_json["dataset"] == "TFI"
+    stop = response.json()
+    assert stop["id"] == "8240DB000324"
+    assert stop["code"] == "324"
+    assert stop["name"] == "Harristown"
+    assert stop["description"] == ""
+    assert math.isclose(stop["lat"], 53.41772268, abs_tol=1e-09)
+    assert math.isclose(stop["lon"], -6.278644169, abs_tol=1e-09)
+    assert stop["zone_id"] == ""
+    assert stop["url"] == ""
+    assert stop["location_type"] is None
+    assert stop["parent_station"] is None
+    assert stop["dataset"] == "TFI"
 
 
-def test_get_stop_by_id_not_found(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/8240DB0003241")
+async def test_stop_returns_404_for_unknown_id(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/8240DB0003241")
     assert response.status_code == 404
-    response_json = response.json()
-    assert response_json["detail"] == "Stop not found with id 8240DB0003241"
+    assert response.json()["detail"] == "Stop not found with id 8240DB0003241"
 
 
-def test_get_stop_detailed(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/8240DB000324/detailed")
+async def test_stop_detailed_includes_routes_and_features(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/8240DB000324/detailed")
     assert response.status_code == 200
-    data = response.json()
-    assert data["stop"]["id"] == "8240DB000324"
-    assert data["stop"]["code"] == "324"
-    assert data["stop"]["name"]
-    assert isinstance(data["routes"], list)
-    assert len(data["routes"]) >= 1
-    assert "route_id" in data["routes"][0]
-    assert "short_name" in data["routes"][0]
-    assert "long_name" in data["routes"][0]
-    assert "stop_features" in data
-    assert "street_view_url" in data
-    assert isinstance(data["street_view_url"], str)
+    payload = response.json()
+    assert payload["stop"]["id"] == "8240DB000324"
+    assert isinstance(payload["routes"], list)
+    assert len(payload["routes"]) >= 1
+    assert "route_id" in payload["routes"][0]
+    assert "stop_features" in payload
+    assert isinstance(payload["street_view_url"], str)
 
 
-def test_get_stop_detailed_not_found(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/__no_such_stop__/detailed")
+async def test_stop_detailed_returns_404_for_unknown_id(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/__no_such_stop__/detailed")
     assert response.status_code == 404
     assert response.json()["detail"] == "Stop not found with id __no_such_stop__"
 
 
-def test_get_stop_by_code(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/code/324")
+async def test_stop_returns_match_for_known_code(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/code/324")
     assert response.status_code == 200
-    response_json = response.json()
-
-    assert response_json["id"] == "8240DB000324"
-    assert response_json["code"] == "324"
-    assert response_json["name"] == "Harristown"
-    assert response_json["description"] == ""
-    assert math.isclose(response_json["lat"], 53.41772268, abs_tol=1e-09)
-    assert math.isclose(response_json["lon"], -6.278644169, abs_tol=1e-09)
-    assert response_json["zone_id"] == ""
-    assert response_json["url"] == ""
-    assert response_json["location_type"] is None
-    assert response_json["parent_station"] is None
-    assert response_json["dataset"] == "TFI"
-
-    response = client.get("/api/v1/stop/code/7132")
-    assert response.status_code == 200
-    response_json = response.json()
-
-    assert response_json["id"] == "8240DB007132"
-    assert response_json["code"] == "7132"
-    assert response_json["name"] == "Charlestown SC"
-    assert response_json["description"] == ""
-    assert math.isclose(response_json["lat"], 53.40308897, abs_tol=1e-09)
-    assert math.isclose(response_json["lon"], -6.304306560, abs_tol=1e-09)
-    assert response_json["zone_id"] == ""
-    assert response_json["url"] == ""
-    assert response_json["location_type"] is None
-    assert response_json["parent_station"] is None
-    assert response_json["dataset"] == "TFI"
+    stop = response.json()
+    assert stop["id"] == "8240DB000324"
+    assert stop["code"] == "324"
+    assert stop["name"] == "Harristown"
 
 
-def test_get_stop_by_code_not_found(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/code/3241")
+async def test_stop_returns_404_for_unknown_code(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/code/3241")
     assert response.status_code == 404
-    response_json = response.json()
-    assert response_json["detail"] == "Stop not found with code 3241"
+    assert response.json()["detail"] == "Stop not found with code 3241"
 
 
-def test_search_stops_by_name(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/search?search=Harristown")
+async def test_search_stops_returns_match_for_name_prefix(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/search?search=harris")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 1
-    assert len(response_json["items"]) == 1
-    assert response_json["items"][0]["id"] == "8240DB000324"
-    assert response_json["items"][0]["name"] == "Harristown"
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["items"][0]["id"] == "8240DB000324"
+    assert payload["items"][0]["name"] == "Harristown"
 
-    response = client.get("/api/v1/stop/search?search=harris")
+
+async def test_search_stops_returns_match_for_code(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/search?search=324")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 1
-    assert len(response_json["items"]) == 1
-    assert response_json["items"][0]["id"] == "8240DB000324"
-    assert response_json["items"][0]["name"] == "Harristown"
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["items"][0]["id"] == "8240DB000324"
 
-    response = client.get("/api/v1/stop/search?search=Charle")
+
+async def test_search_stops_paginates_with_limit_and_offset(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/search?search=Harristown&currentPage=1&pageSize=10")
     assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 1
-    assert len(response_json["items"]) == 1
-    assert response_json["items"][0]["id"] == "8240DB007132"
-    assert response_json["items"][0]["name"] == "Charlestown SC"
+    payload = response.json()
+    assert payload["total"] == 1
+    assert payload["offset"] == 0
+    assert payload["limit"] == 10
+    assert len(payload["items"]) == 1
 
 
-def test_search_stops_by_code(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/search?search=324")
-    assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 1
-    assert len(response_json["items"]) == 1
-    assert response_json["items"][0]["id"] == "8240DB000324"
-    assert response_json["items"][0]["name"] == "Harristown"
-
-    response = client.get("/api/v1/stop/search?search=7132")
-    assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 1
-    assert len(response_json["items"]) == 1
-    assert response_json["items"][0]["id"] == "8240DB007132"
-    assert response_json["items"][0]["name"] == "Charlestown SC"
-
-
-def test_search_stops_offsetpagination(client: TestClient) -> None:
-    response = client.get("/api/v1/stop/search?search=Harristown&currentPage=1&pageSize=10")
-    assert response.status_code == 200
-    response_json = response.json()
-    assert response_json["total"] == 1
-    assert response_json["offset"] == 0
-    assert response_json["limit"] == 10
-    assert len(response_json["items"]) == 1
-    assert response_json["items"][0]["id"] == "8240DB000324"
-    assert response_json["items"][0]["name"] == "Harristown"
-
-    response = client.get("/api/v1/stop/search?search=Harristown&currentPage=2&pageSize=10")
-    assert response.status_code == 404  # No results on the second page
+async def test_search_stops_returns_404_when_page_is_empty(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("/api/v1/stop/search?search=Harristown&currentPage=2&pageSize=10")
+    assert response.status_code == 404

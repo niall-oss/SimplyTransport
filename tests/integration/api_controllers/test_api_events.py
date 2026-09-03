@@ -1,37 +1,36 @@
-from litestar.testing import TestClient
+import pytest
+from litestar.testing import AsyncTestClient
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-def test_events_paginated_returns_results(client: TestClient) -> None:
-    response = client.get("api/v1/events/")
+async def test_events_paginated_returns_results(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/events/")
     assert response.status_code == 200
-    response_json = response.json()
+    payload = response.json()
+    assert payload["total"] >= 1
+    assert len(payload["events"]) >= 1
+    assert payload["events"][0]["event_type"]
+    assert payload["events"][0]["created_at"]
 
-    assert "total" in response_json
-    assert isinstance(response_json["total"], int)
-    assert response_json["total"] >= 1
-    assert len(response_json["events"]) >= 1
 
-
-def test_events_paginated_by_type_returns_results(client: TestClient) -> None:
-    response = client.get("api/v1/events/gtfs.database.updated")
+async def test_events_paginated_by_type_returns_results(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/events/gtfs.database.updated")
     assert response.status_code == 200
-    response_json = response.json()
-
-    assert "total" in response_json
-    assert isinstance(response_json["total"], int)
-    assert response_json["total"] >= 1
-    assert len(response_json["events"]) >= 1
+    payload = response.json()
+    assert payload["total"] >= 1
+    assert all(event["event_type"] == "gtfs.database.updated" for event in payload["events"])
+    assert payload["events"][0]["created_at"]
 
 
-def test_events_paginated_by_type_non_existent_returns_400(client: TestClient) -> None:
-    response = client.get("api/v1/events/something.that.does.not.exist")
+async def test_events_paginated_by_type_return_400_for_unknown_type(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/events/something.that.does.not.exist")
     assert response.status_code == 400
 
 
-def test_events_most_recent_by_type_returns_results(client: TestClient) -> None:
-    response = client.get("api/v1/events/gtfs.database.updated/most-recent")
+async def test_events_most_recent_by_type_returns_result(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/events/gtfs.database.updated/most-recent")
     assert response.status_code == 200
-    response_json = response.json()
-
-    assert response_json["event_type"] == "gtfs.database.updated"
-    assert response_json["created_at"] is not None
+    event = response.json()
+    assert event["event_type"] == "gtfs.database.updated"
+    assert event["created_at"] is not None

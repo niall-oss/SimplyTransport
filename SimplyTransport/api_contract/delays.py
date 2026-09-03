@@ -1,12 +1,12 @@
 from datetime import datetime, time
 
-from pydantic import Field, computed_field
+from pydantic import AliasChoices, Field, computed_field
 
 from SimplyTransport.api_contract.base import ApiBaseModel
 
 
 class TS_StopTime(ApiBaseModel):
-    timestamp: datetime
+    timestamp: datetime = Field(validation_alias=AliasChoices("timestamp", "Timestamp"))
     stop_id: str
     route_code: str
     scheduled_time: time
