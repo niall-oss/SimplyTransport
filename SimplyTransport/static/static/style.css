@@ -394,6 +394,8 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-end;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 		padding-top: 0.3rem;
 		font-size: 0.8rem;
 		border-top: 2px solid var(--bg-color-highlight);
@@ -401,13 +403,14 @@
 
 	.pagination-pages {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: flex-start;
 		gap: 0.4rem;
 		flex-wrap: wrap;
 	}
 
 	.colors-legend {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.9rem;
 	}
 
@@ -448,6 +451,12 @@
 		padding-right: 0.3rem;
 		border-radius: var(--radius-sm);
 		font-size: 1.1rem;
+	}
+
+	.code-highlight-extra {
+		color: var(--font-color-highlight);
+		outline: 1px solid var(--font-color-highlight);
+		padding: 0.1rem 0.4rem 0.1rem 0.3rem;
 	}
 
 	.input-with-loader {
@@ -798,6 +807,11 @@
 
 		.code-highlight {
 			font-size: 0.85rem;
+		}
+
+		.pagination-total {
+			flex-direction: column;
+			align-items: flex-start;
 		}
 
 		.pagination-button {

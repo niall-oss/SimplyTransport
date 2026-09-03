@@ -31,8 +31,6 @@ class StopTimeModel(BigIntAuditBase):
     timepoint: Mapped[Timepoint | None] = mapped_column(Integer)
     dataset: Mapped[str] = mapped_column(String(length=80))
 
-    def true_if_active_between_times(self, start_time: time, end_time: time):
-        """Returns True if the stop time arrival_time is active between the two times"""
-        if start_time <= self.arrival_time <= end_time:
-            return True
-        return False
+    def is_active_between_times(self, start_time: time, end_time: time) -> bool:
+        """True if arrival_time falls between the two times."""
+        return start_time <= self.arrival_time <= end_time

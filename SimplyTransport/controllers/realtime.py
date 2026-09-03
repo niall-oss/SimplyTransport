@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar import Controller, get
@@ -11,6 +11,7 @@ from SimplyTransport.lib.cache_keys import (
     key_builder_from_path,
     key_builder_from_path_and_query,
 )
+from SimplyTransport.lib.time_date_conversions import next_date_for_day
 
 from ..domain.enums import DayOfWeek, Direction
 from ..domain.route.repo import RouteRepository, provide_route_repo
@@ -96,14 +97,23 @@ class RealtimeController(Controller):
         start_time = (current_time + timedelta(minutes=start_time_difference)).time()
         end_time = (current_time + timedelta(minutes=end_time_difference)).time()
 
+        on_date = date.today()
         schedules = await schedule_service.get_schedule_on_stop_for_day_between_times(
             stop_id=stop_id,
-            day=DayOfWeek(datetime.now().weekday()),
+            day=DayOfWeek(current_time.weekday()),
             start_time=start_time,
             end_time=end_time,
         )
-        schedules = await schedule_service.remove_exceptions_and_inactive_calendars(schedules)
-        schedules = await schedule_service.add_in_added_exceptions(schedules)  # TODO
+        schedules = await schedule_service.remove_exceptions_and_inactive_calendars(
+            schedules, on_date=on_date
+        )
+        schedules = await schedule_service.add_in_added_exceptions(
+            schedules,
+            on_date=on_date,
+            stop_id=stop_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
         schedules = await schedule_service.apply_custom_23_00_sorting(schedules)
 
         realtime_schedules = await realtime_service.get_realtime_schedules_for_static_schedules(schedules)
@@ -117,6 +127,7 @@ class RealtimeController(Controller):
                 "realtime_schedules": realtime_schedules,
                 "start_time_difference": start_time_difference,
                 "end_time_difference": end_time_difference,
+                "has_extra_service": any(rt.static_schedule.is_added_exception for rt in realtime_schedules),
             },
         )
 
@@ -135,15 +146,21 @@ class RealtimeController(Controller):
     ) -> Template:
         if day is None:
             day = DayOfWeek(datetime.now().weekday())
+        on_date = next_date_for_day(day)
         schedules = await schedule_service.get_schedule_on_stop_for_day(stop_id=stop_id, day=day)
-        schedules = await schedule_service.remove_exceptions_and_inactive_calendars(schedules)
-        schedules = await schedule_service.add_in_added_exceptions(schedules)  # TODO
+        schedules = await schedule_service.remove_exceptions_and_inactive_calendars(
+            schedules, on_date=on_date
+        )
+        schedules = await schedule_service.add_in_added_exceptions(
+            schedules, on_date=on_date, stop_id=stop_id
+        )
 
         return Template(
             template_name="realtime/stop_schedule.html",
             context={
                 "schedules": schedules,
                 "day_string": DayOfWeek(day).name.capitalize(),
+                "has_extra_service": any(schedule.is_added_exception for schedule in schedules),
             },
         )
 

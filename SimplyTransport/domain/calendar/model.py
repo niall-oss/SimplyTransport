@@ -32,15 +32,17 @@ class CalendarModel(BigIntAuditBase):
     )
     trips: Mapped[list[TripModel]] = relationship(back_populates="service")
 
-    def true_if_active(self, date: date):
-        """Returns True if the calendar is active on the given date"""
-        if self.start_date <= date <= self.end_date:
-            return True
-        return False
-
-    def in_exceptions(self, exceptions: list[CalendarDateModel]):
-        """This assumes that the exceptions passed are active on the given date"""
-        for exception in exceptions:
-            if exception.service_id == self.id:
-                return True
-        return False
+    def is_active_on_date(self, date: date) -> bool:
+        """True when this regular service runs on the date (range and weekday)."""
+        if not (self.start_date <= date <= self.end_date):
+            return False
+        weekday_flags = (
+            self.monday,
+            self.tuesday,
+            self.wednesday,
+            self.thursday,
+            self.friday,
+            self.saturday,
+            self.sunday,
+        )
+        return weekday_flags[date.weekday()] == 1

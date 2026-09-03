@@ -8,6 +8,7 @@ __pycache__
 hidden.txt
 /gtfs_data/TFI/*.txt
 /gtfs_data/TFI/*.geojson
+/gtfs_data/TFI/gtfs_checker/
 SimplyTransport/templates/maps/static/*/*.html
 *.bak
 .coverage

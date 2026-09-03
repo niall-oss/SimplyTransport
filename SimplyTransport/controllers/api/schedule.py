@@ -13,7 +13,7 @@ from ...domain.services.schedule_service import (
     provide_schedule_service,
 )
 from ...lib.parameters.time_query import DayQuery, EndTimeQuery, StartTimeQuery
-from ...lib.time_date_conversions import return_time_difference
+from ...lib.time_date_conversions import next_date_for_day, return_time_difference
 
 __all__ = ["ScheduleController"]
 
@@ -54,6 +54,7 @@ class ScheduleController(Controller):
                 extra={"start_time": start_time, "end_time": end_time, "hours_difference": difference},
             )
 
+        on_date = next_date_for_day(day)
         schedules = await schedule_service.get_schedule_on_stop_for_day_between_times(
             stop_id=stop_id,
             day=day,
@@ -61,8 +62,16 @@ class ScheduleController(Controller):
             end_time=end_time,
         )
 
-        schedules = await schedule_service.remove_exceptions_and_inactive_calendars(schedules)
-        schedules = await schedule_service.add_in_added_exceptions(schedules)  # TODO
+        schedules = await schedule_service.remove_exceptions_and_inactive_calendars(
+            schedules, on_date=on_date
+        )
+        schedules = await schedule_service.add_in_added_exceptions(
+            schedules,
+            on_date=on_date,
+            stop_id=stop_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
         schedules = await schedule_service.apply_custom_23_00_sorting(schedules)
 
         return [StaticSchedule.model_validate(schedule) for schedule in schedules]

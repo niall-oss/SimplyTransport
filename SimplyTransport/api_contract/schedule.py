@@ -8,3 +8,4 @@ class StaticSchedule(ApiBaseModel):
     route: Route
     stop_time: StopTime
     trip: Trip
+    is_added_exception: bool

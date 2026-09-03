@@ -14,6 +14,8 @@ async def test_schedule_returns_rows_for_stop_in_time_window(async_client: Async
     assert "route" in schedules[0]
     assert "stop_time" in schedules[0]
     assert "trip" in schedules[0]
+    assert "is_added_exception" in schedules[0]
+    assert schedules[0]["is_added_exception"] is False
     assert schedules[0]["route"]["long_name"] == "Monkstown Avenue - Harristown"
 
 
