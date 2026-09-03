@@ -25,7 +25,6 @@ jobs:
 
           # Database
           DB_URL=postgresql+asyncpg://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/postgres
-          DB_URL_SYNC=postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/postgres
           DB_ECHO=false
           TIMESCALE_URL=postgresql+asyncpg://${{ secrets.TIMESCALE_USER }}:${{ secrets.TIMESCALE_PASSWORD }}@timescale:5432/postgres
 

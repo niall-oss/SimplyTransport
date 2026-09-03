@@ -34,7 +34,6 @@ def create_app() -> Litestar:
         compression_config=compression_config,
         dependencies={
             "limit_offset": Provide(provide_limit_offset_pagination),
-            "timescale_db_session": Provide(db_services.provide_timescale_db_session),
             "redis_service": Provide(provide_redis_service),
         },
         response_cache_config=redis_service_cache_config_factory(),

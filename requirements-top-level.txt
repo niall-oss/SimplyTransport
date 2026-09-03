@@ -15,7 +15,6 @@ opentelemetry-proto==1.44.0
 opentelemetry-sdk==1.44.0
 opentelemetry-semantic-conventions==0.65b0
 opentelemetry-util-http==0.65b0
-psycopg2-binary==2.9.12
 pydantic==2.13.5
 pydantic-settings==2.15.0
 redis==8.1.0

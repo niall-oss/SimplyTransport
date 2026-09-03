@@ -4,7 +4,6 @@ import asyncio
 import json
 import os
 import subprocess
-import time
 from collections import abc
 from pathlib import Path
 
@@ -19,7 +18,6 @@ GTFS_FIXTURE_DIR = REPO_ROOT / "tests" / "gtfs_test_data" / "TFI"
 
 TEST_ENV = {
     "DB_URL": "postgresql+asyncpg://st_test:st_test@127.0.0.1:15432/st_database",
-    "DB_URL_SYNC": "postgresql+psycopg2://st_test:st_test@127.0.0.1:15432/st_database",
     "TIMESCALE_URL": "postgresql+asyncpg://st_test:st_test@127.0.0.1:15433/st_ts_database",
     "REDIS_HOST": "127.0.0.1",
     "REDIS_PORT": "16379",
@@ -63,46 +61,49 @@ def _apply_test_env() -> None:
     reset_timescale_engines()
 
 
-def _wait_for_sql(sync_url: str, *, attempts: int = 40, delay_s: float = 0.5) -> None:
+async def _wait_for_sql(url: str, *, attempts: int = 40, delay_s: float = 0.5) -> None:
     """pg_isready can pass before Timescale finishes restarting after init."""
-    from sqlalchemy import create_engine, text
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
 
     last_error: Exception | None = None
-    engine = create_engine(sync_url, pool_pre_ping=True)
+    engine = create_async_engine(url, pool_pre_ping=True)
     try:
         for _ in range(attempts):
             try:
-                with engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
+                async with engine.connect() as conn:
+                    await conn.execute(text("SELECT 1"))
                 return
             except Exception as exc:
                 last_error = exc
-                time.sleep(delay_s)
+                await asyncio.sleep(delay_s)
     finally:
-        engine.dispose()
-    raise RuntimeError(f"Timed out waiting for a SQL connection to {sync_url}") from last_error
+        await engine.dispose()
+    raise RuntimeError(f"Timed out waiting for a SQL connection to {url}") from last_error
 
 
 def _wait_for_stack() -> None:
     from SimplyTransport.lib import settings
 
-    _wait_for_sql(settings.app.DB_URL_SYNC)
-    timescale_sync_url = settings.app.TIMESCALE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-    _wait_for_sql(timescale_sync_url)
+    async def _wait_both() -> None:
+        await _wait_for_sql(settings.app.DB_URL)
+        await _wait_for_sql(settings.app.TIMESCALE_URL)
+
+    asyncio.run(_wait_both())
 
 
 def _seed_database() -> None:
     from SimplyTransport.lib.db.database import get_async_engine, reset_engines
-    from SimplyTransport.lib.db.services import create_database_sync
+    from SimplyTransport.lib.db.services import create_database_tables
     from SimplyTransport.lib.db.timescale_database import reset_timescale_engines
     from SimplyTransport.lib.gtfs_dataset import generate_database_statistics, import_gtfs_dataset
 
-    create_database_sync()
     gtfs_dir = str(GTFS_FIXTURE_DIR).replace("\\", "/") + "/"
 
     async def _seed() -> None:
         from SimplyTransport.lib.gtfs_realtime_importers import RealTimeImporter
 
+        await create_database_tables()
         await import_gtfs_dataset(gtfs_dir)
         await generate_database_statistics()
         payload = json.loads(

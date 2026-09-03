@@ -4,10 +4,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import rich.progress as rp
-from sqlalchemy import insert
+from sqlalchemy import delete, insert
 
 from ..domain.agency.model import AgencyModel
 from ..domain.calendar.model import CalendarModel
@@ -19,7 +19,7 @@ from ..domain.stop.model import StopModel
 from ..domain.stop_times.model import StopTimeModel
 from ..domain.trip.model import TripModel
 from . import time_date_conversions as tdc
-from .db.database import async_session_factory, get_sync_session
+from .db.database import async_session_factory
 
 NUMBER_OF_CONSUMERS = 2
 QUEUE_MAXSIZE = 2
@@ -46,6 +46,8 @@ class GTFSCoreBatch:
 
 
 class AsyncImporter(ABC):
+    model: ClassVar[type]
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         self.reader = reader
         self.row_count = row_count
@@ -64,9 +66,10 @@ class AsyncImporter(ABC):
     async def producer(self, q: asyncio.Queue, number_of_consumers: int):
         pass
 
-    @abstractmethod
-    def clear_table(self):
-        pass
+    async def clear_table(self) -> None:
+        async with async_session_factory() as session:
+            await session.execute(delete(self.model).where(self.model.dataset == self.dataset))
+            await session.commit()
 
 
 async def consumer(q: asyncio.Queue) -> None:
@@ -154,6 +157,8 @@ class GTFSImporter:
 
 
 class AgencyImporter(AsyncImporter):
+    model = AgencyModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 10000
@@ -198,15 +203,10 @@ class AgencyImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(AgencyModel).filter(AgencyModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class CalendarImporter(AsyncImporter):
+    model = CalendarModel
+
     def __init__(
         self,
         reader: Iterator[dict[str, Any]],
@@ -262,15 +262,10 @@ class CalendarImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(CalendarModel).filter(CalendarModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class CalendarDateImporter(AsyncImporter):
+    model = CalendarDateModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 10000
@@ -321,15 +316,10 @@ class CalendarDateImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(CalendarDateModel).filter(CalendarDateModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class RouteImporter(AsyncImporter):
+    model = RouteModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 10000
@@ -381,15 +371,10 @@ class RouteImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(RouteModel).filter(RouteModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class TripImporter(AsyncImporter):
+    model = TripModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 20000
@@ -438,15 +423,10 @@ class TripImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(TripModel).filter(TripModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class StopImporter(AsyncImporter):
+    model = StopModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 10000
@@ -507,15 +487,10 @@ class StopImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(StopModel).filter(StopModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class ShapeImporter(AsyncImporter):
+    model = ShapeModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 20000
@@ -565,15 +540,10 @@ class ShapeImporter(AsyncImporter):
             for _ in range(number_of_consumers):
                 await q.put(None)
 
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(ShapeModel).filter(ShapeModel.dataset == self.dataset).delete()
-            session.commit()
-
 
 class StopTimeImporter(AsyncImporter):
+    model = StopTimeModel
+
     def __init__(self, reader: Iterator[dict[str, Any]], row_count: int | None, dataset: str):
         super().__init__(reader, row_count, dataset)
         self.batchsize = 20000
@@ -642,10 +612,3 @@ class StopTimeImporter(AsyncImporter):
             # Signal the consumer that the producer is done
             for _ in range(number_of_consumers):
                 await q.put(None)
-
-    def clear_table(self):
-        """Clears the table in the database that corresponds to the file"""
-
-        with get_sync_session() as session:
-            session.query(StopTimeModel).filter(StopTimeModel.dataset == self.dataset).delete()
-            session.commit()

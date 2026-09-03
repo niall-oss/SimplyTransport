@@ -15,26 +15,7 @@ The canonical runtime is **Python 3.14.3**; [`pyproject.toml`](../pyproject.toml
    uv pip install -r requirements-top-level.txt
    ```
 
-3. Ensure system packages for building or linking native extensions remain installed when wheels are missing (see **PostgreSQL client on Ubuntu** below).
+3. If a dependency has no wheel and compiles a C extension, install build tools first: `sudo apt install -y build-essential python3-dev`.
 4. Reload the app: `supervisorctl restart simplytransport` (or your equivalent).
-
-### PostgreSQL client on Ubuntu (`psycopg2`)
-
-Requirements list **`psycopg2-binary` only**. In the past, some setups added both `psycopg2` and `psycopg2-binary`; that is unnecessary—they ship the same Python module, and the plain `psycopg2` line often forces a **source build** that fails until PostgreSQL dev headers are present.
-
-**Recommended on Ubuntu before `pip` / `uv pip install`:**
-
-```bash
-sudo apt update
-sudo apt install -y libpq-dev
-```
-
-If anything still compiles C extensions (unusual when wheels exist), add build tools:
-
-```bash
-sudo apt install -y build-essential python3-dev
-```
-
-Then install app dependencies from the project root as usual. With `libpq-dev` installed, a fallback source build of the client can succeed; with a matching **wheel** for your Python version, `psycopg2-binary` installs without compiling.
 
 `deploy.sh` runs `git pull`, `uv pip install -r requirements-top-level.txt` into `venv`, then restarts Supervisor. It does not upgrade the Python interpreter—recreate `venv` manually when you change the runtime version (see above).

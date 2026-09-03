@@ -1,12 +1,10 @@
 import asyncio
-from collections.abc import AsyncGenerator
 
 from advanced_alchemy.base import UUIDBase
-from SimplyTransport.lib import settings
-from sqlalchemy import MetaData, create_engine, text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from sqlalchemy import Connection, MetaData, Table, text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from .database import get_async_engine, get_sync_engine
+from .database import get_async_engine
 from .timescale_database import get_async_timescale_engine
 
 
@@ -45,35 +43,7 @@ async def create_database_tables() -> None:
         raise e
 
 
-def create_database_sync() -> None:
-    """Create tables on Postgres and Timescale using sync engines."""
-    engine = get_sync_engine()
-    try:
-        UUIDBase.metadata.create_all(bind=engine)
-    except ConnectionRefusedError as e:
-        print(e)
-        print(
-            f"\nDatabase connection refused. Please ensure the database is "
-            f"running and accessible.\nURL: {engine.url}\n"
-        )
-        raise e
-
-    timescale_sync_url = settings.app.TIMESCALE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-    timescale_engine = create_engine(timescale_sync_url, echo=settings.app.DB_ECHO, pool_pre_ping=True)
-    try:
-        UUIDBase.metadata.create_all(bind=timescale_engine)
-    except ConnectionRefusedError as e:
-        print(e)
-        print(
-            f"\nTimescale database connection refused. Please ensure the database is "
-            f"running and accessible.\nURL: {timescale_engine.url}\n"
-        )
-        raise e
-    finally:
-        timescale_engine.dispose()
-
-
-async def recreate_indexes(table_name: str | None = None):
+async def recreate_indexes(table_name: str | None = None) -> None:
     """Recreate all indexes
 
     Args:
@@ -81,26 +51,24 @@ async def recreate_indexes(table_name: str | None = None):
         If None, indexes will be recreated for all tables.
 
     """
-    engine = get_sync_engine()
-    metadata = MetaData()
-    metadata.reflect(bind=engine)
+    engine = get_async_engine()
 
-    if table_name is None:
-        # recreate index on every table
-        for table_name in metadata.tables:
-            table = metadata.tables[table_name]
+    def _recreate(sync_conn: Connection) -> None:
+        metadata = MetaData()
+        metadata.reflect(bind=sync_conn)
+        tables: list[Table] = (
+            [metadata.tables[table_name]] if table_name is not None else list(metadata.tables.values())
+        )
+        for table in tables:
             indexes = list(table.indexes)
             for index in indexes:
-                index.drop(bind=engine)
+                index.drop(bind=sync_conn)
             for index in indexes:
-                index.create(bind=engine)
-    else:
-        table = metadata.tables[table_name]
-        indexes = list(table.indexes)
-        for index in indexes:
-            index.drop(bind=engine)
-        for index in indexes:
-            index.create(bind=engine)
+                index.create(bind=sync_conn)
+
+    async with engine.connect() as conn:
+        await conn.run_sync(_recreate)
+        await conn.commit()
 
 
 async def test_database_connections():
@@ -131,14 +99,3 @@ async def test_database_connections():
         await asyncio.gather(*tasks)
 
     await main()
-
-
-async def provide_timescale_db_session() -> AsyncGenerator[AsyncSession]:
-    """This provides the Timescale database session."""
-
-    session = AsyncSession(get_async_timescale_engine())
-    try:
-        async with session.begin():
-            yield session
-    finally:
-        await session.close()
