@@ -155,7 +155,10 @@ class RedisService:
         Returns:
             str | None: The value from the cache or None if the key does not exist.
         """
-        return await self.redis.get(key)
+        value = await self.redis.get(key)
+        if isinstance(value, bytes):
+            return value.decode()
+        return value
 
     async def check_keys_exist(self, keys: Sequence[str]) -> dict[str, bool]:
         """
