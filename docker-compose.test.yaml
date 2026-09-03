@@ -13,8 +13,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U st_test -d st_database"]
       interval: 2s
-      timeout: 5s
-      retries: 20
+      timeout: 2s
+      retries: 30
+      start_period: 5s
 
   timescale:
     image: timescale/timescaledb:latest-pg16
@@ -26,10 +27,16 @@ services:
     ports:
       - "15433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U st_test -d st_ts_database"]
+      # Timescale restarts Postgres after first init; pg_isready alone is too early.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U st_test -d st_ts_database && psql -U st_test -d st_ts_database -c 'SELECT 1'",
+        ]
       interval: 2s
-      timeout: 5s
-      retries: 20
+      timeout: 2s
+      retries: 30
+      start_period: 5s
 
   redis:
     image: redis:alpine
