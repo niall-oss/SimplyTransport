@@ -76,7 +76,9 @@ def _seed_database() -> None:
 
         await import_gtfs_dataset(gtfs_dir)
         await generate_database_statistics()
-        payload = json.loads((GTFS_FIXTURE_DIR / "realtime_e2e_trip_updates.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (GTFS_FIXTURE_DIR / "realtime_e2e_trip_updates.json").read_text(encoding="utf-8")
+        )
         await RealTimeImporter(url="", api_key="", dataset="TFI").import_from_payload(payload)
         await get_async_engine().dispose()
 
