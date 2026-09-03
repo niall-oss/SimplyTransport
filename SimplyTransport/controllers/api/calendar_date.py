@@ -2,7 +2,7 @@ from datetime import date, datetime, time
 
 from advanced_alchemy.filters import OnBeforeAfter
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath
 
@@ -20,22 +20,24 @@ class CalendarDateController(Controller):
     dependencies = {"repo": Provide(provide_calendar_date_repo)}
 
     @get("/", summary="All calendar dates")
-    async def get_all_calendars(self, repo: CalendarDateRepository) -> list[CalendarDate]:
-        result = await repo.list()
+    async def get_all_calendars(self, repo: NamedDependency[CalendarDateRepository]) -> list[CalendarDate]:
+        result = await repo.get_many()
         return [CalendarDate.model_validate(obj) for obj in result]
 
     @get("/count", summary="All calendar dates with total count")
-    async def get_all_calendars_and_count(self, repo: CalendarDateRepository) -> CalendarDateWithTotal:
-        result, total = await repo.list_and_count()
+    async def get_all_calendars_and_count(
+        self, repo: NamedDependency[CalendarDateRepository]
+    ) -> CalendarDateWithTotal:
+        result, total = await repo.get_many_and_count()
         return CalendarDateWithTotal(
             total=total, calendar_dates=[CalendarDate.model_validate(obj) for obj in result]
         )
 
     @get("/{service_id:str}", summary="CalendarDates by service ID", raises=[NotFoundException])
     async def get_calendar_dates_by_id(
-        self, repo: CalendarDateRepository, service_id: FromPath[str]
+        self, repo: NamedDependency[CalendarDateRepository], service_id: FromPath[str]
     ) -> list[CalendarDate]:
-        result = await repo.list(service_id=service_id)
+        result = await repo.get_many(service_id=service_id)
         if result is None or len(result) == 0:
             raise NotFoundException(detail=f"CalendarDates not found with service_id {service_id}")
         return [CalendarDate.model_validate(obj) for obj in result]
@@ -46,12 +48,12 @@ class CalendarDateController(Controller):
         description="Date format = YYYY-MM-DD",
     )
     async def get_active_calendar_dates_on_date(
-        self, repo: CalendarDateRepository, date: FromPath[date]
+        self, repo: NamedDependency[CalendarDateRepository], date: FromPath[date]
     ) -> list[CalendarDate]:
         start_date = datetime.combine(date, time.min)
         end_date = datetime.combine(date, time.max)
 
-        result = await repo.list(
+        result = await repo.get_many(
             OnBeforeAfter(
                 field_name="date",
                 on_or_before=end_date,

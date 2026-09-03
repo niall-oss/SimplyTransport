@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta
 from typing import Any, cast
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -271,7 +272,9 @@ class TSStopTimeRepository(SQLAlchemyAsyncRepository[TS_StopTimeModel]):  # type
     model_type = TS_StopTimeModel
 
 
-async def provide_ts_stop_time_repo(timescale_db_session: AsyncSession) -> TSStopTimeRepository:
+async def provide_ts_stop_time_repo(
+    timescale_db_session: NamedDependency[AsyncSession],
+) -> TSStopTimeRepository:
     """This provides the TSStopTime repository."""
 
     return TSStopTimeRepository(session=timescale_db_session)

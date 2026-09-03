@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,7 +42,7 @@ class ShapeRepository(SQLAlchemyAsyncRepository[ShapeModel]):  # type: ignore[ty
     model_type = ShapeModel
 
 
-async def provide_shape_repo(db_session: AsyncSession) -> ShapeRepository:
+async def provide_shape_repo(db_session: NamedDependency[AsyncSession]) -> ShapeRepository:
     """This provides the Shape repository."""
 
     return ShapeRepository(session=db_session)

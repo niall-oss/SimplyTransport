@@ -3,7 +3,7 @@ from typing import Annotated
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.pagination import OffsetPagination  # type: ignore
 from litestar.params import FromPath, QueryParameter
@@ -35,7 +35,10 @@ class StopController(Controller):
         cache_key_builder=key_builder_from_path(CacheKeys.StopApi.DETAILED_KEY_TEMPLATE, "id"),
     )
     async def get_stop_detailed_by_id(
-        self, repo: StopRepository, route_repo: RouteRepository, id: FromPath[str]
+        self,
+        repo: NamedDependency[StopRepository],
+        route_repo: NamedDependency[RouteRepository],
+        id: FromPath[str],
     ) -> StopDetailed:
         try:
             return await assemble_stop_detailed(repo, route_repo, id)
@@ -43,7 +46,7 @@ class StopController(Controller):
             raise NotFoundException(detail=f"Stop not found with id {id}") from e
 
     @get("/{id:str}", summary="Stop by ID", raises=[NotFoundException])
-    async def get_stop_by_id(self, repo: StopRepository, id: FromPath[str]) -> Stop:
+    async def get_stop_by_id(self, repo: NamedDependency[StopRepository], id: FromPath[str]) -> Stop:
         try:
             result = await repo.get(id)
         except NotFoundError as e:
@@ -51,7 +54,7 @@ class StopController(Controller):
         return Stop.model_validate(result)
 
     @get("/code/{code:str}", summary="Stop by code", raises=[NotFoundException])
-    async def get_stop_by_code(self, repo: StopRepository, code: FromPath[str]) -> Stop:
+    async def get_stop_by_code(self, repo: NamedDependency[StopRepository], code: FromPath[str]) -> Stop:
         try:
             result = await repo.get_by_code(code)
         except NotFoundError as e:
@@ -66,8 +69,8 @@ class StopController(Controller):
     )
     async def search_stops_by_name_or_code(
         self,
-        repo: StopRepository,
-        limit_offset: LimitOffset,
+        repo: NamedDependency[StopRepository],
+        limit_offset: NamedDependency[LimitOffset],
         search: Annotated[
             str,
             QueryParameter(name="search", description="Search string to search by name or code"),

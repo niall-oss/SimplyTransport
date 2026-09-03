@@ -1,6 +1,7 @@
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -28,7 +29,7 @@ class RouteRepository(SQLAlchemyAsyncRepository[RouteModel]):  # type: ignore
     ) -> tuple[list[RouteModel], int]:
         """List stops that start with name/code."""
 
-        results, total = await self.list_and_count(
+        results, total = await self.get_many_and_count(
             RouteModel.short_name.istartswith(search) | RouteModel.long_name.istartswith(search),
             limit_offset,
             OrderBy(RouteModel.short_name, "asc"),  # type: ignore
@@ -42,7 +43,7 @@ class RouteRepository(SQLAlchemyAsyncRepository[RouteModel]):  # type: ignore
     async def get_routes_by_stop_id(self, stop_id: str) -> list[RouteModel]:
         """Get routes by stop_id."""
 
-        return await self.list(
+        return await self.get_many(
             RouteModel.trips.any(TripModel.stop_times.any(StopTimeModel.stop_id == stop_id))
         )
 
@@ -78,7 +79,7 @@ class RouteRepository(SQLAlchemyAsyncRepository[RouteModel]):  # type: ignore
     async def get_routes_by_stop_id_with_agency(self, stop_id: str) -> list[RouteModel]:
         """Get routes by stop_id with agency."""
 
-        return await self.list(
+        return await self.get_many(
             RouteModel.trips.any(TripModel.stop_times.any(StopTimeModel.stop_id == stop_id)),
             statement=select(RouteModel).options(joinedload(RouteModel.agency)),
         )
@@ -91,18 +92,20 @@ class RouteRepository(SQLAlchemyAsyncRepository[RouteModel]):  # type: ignore
     async def get_with_agencies(self) -> list[RouteModel]:
         """Get all routes with agencies"""
 
-        return await self.list(statement=select(RouteModel).options(joinedload(RouteModel.agency)))
+        return await self.get_many(statement=select(RouteModel).options(joinedload(RouteModel.agency)))
 
     async def get_with_agencies_by_agency_id(self, agency_id: str) -> list[RouteModel]:
         """Get all routes with agencies by agency_id"""
 
-        return await self.list(
+        return await self.get_many(
             RouteModel.agency_id == agency_id,
             statement=select(RouteModel).options(joinedload(RouteModel.agency)),
         )
 
 
-async def provide_route_repo(db_session: AsyncSession, redis_service: RedisService) -> RouteRepository:
+async def provide_route_repo(
+    db_session: NamedDependency[AsyncSession], redis_service: NamedDependency[RedisService]
+) -> RouteRepository:
     """This provides the Route repository."""
 
     return RouteRepository(session=db_session, cache=redis_service)

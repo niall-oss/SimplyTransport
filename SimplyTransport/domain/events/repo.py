@@ -4,6 +4,7 @@ from typing import Literal
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,7 +41,7 @@ class EventRepository(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
     ) -> tuple[list[EventModel], int]:
         """Get paginated events by type with total."""
 
-        results, total = await self.list_and_count(
+        results, total = await self.get_many_and_count(
             EventModel.event_type == event_type,
             OrderBy(EventModel.created_at, order),  # type: ignore
             limit_offset,
@@ -106,7 +107,7 @@ class EventRepository(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
     ) -> tuple[list[EventModel], int]:
         """Get paginated events with total."""
 
-        results, total = await self.list_and_count(
+        results, total = await self.get_many_and_count(
             OrderBy(EventModel.created_at, order),  # type: ignore
             limit_offset,
         )
@@ -121,19 +122,19 @@ class EventRepository(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
     ) -> list[EventModel]:
         """Get paginated events."""
 
-        return await self.list(OrderBy(EventModel.created_at, order), limit_offset)  # type: ignore
+        return await self.get_many(OrderBy(EventModel.created_at, order), limit_offset)  # type: ignore
 
     async def cleanup_events(self, event_type: EventType | None = None) -> int:
         """Cleanup events that have expired. If event_type is provided, only cleanup events of that type."""
 
         if event_type:
-            events_to_delete = await self.list(
+            events_to_delete = await self.get_many(
                 EventModel.event_type == event_type, EventModel.expiry_time < datetime.now(tz=UTC)
             )
             total_events_deleted = len(events_to_delete)
             await self.delete_many([event.id for event in events_to_delete])
         else:
-            events_to_delete = await self.list(EventModel.expiry_time < datetime.now(tz=UTC))
+            events_to_delete = await self.get_many(EventModel.expiry_time < datetime.now(tz=UTC))
             total_events_deleted = len(events_to_delete)
             await self.delete_many([event.id for event in events_to_delete])
         await self.session.commit()
@@ -143,7 +144,7 @@ class EventRepository(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
     model_type = EventModel
 
 
-async def provide_event_repo(db_session: AsyncSession) -> EventRepository:
+async def provide_event_repo(db_session: NamedDependency[AsyncSession]) -> EventRepository:
     """This provides the Event repository."""
 
     return EventRepository(session=db_session)

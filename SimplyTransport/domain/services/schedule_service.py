@@ -1,5 +1,6 @@
 from datetime import date, time
 
+from litestar.di import NamedDependency
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..calendar_dates.repo import CalendarDateRepository
@@ -89,6 +90,6 @@ class ScheduleService:
         return await self.schedule_repository.get_by_trip_id(trip_id=trip_id)
 
 
-async def provide_schedule_service(db_session: AsyncSession) -> ScheduleService:
+async def provide_schedule_service(db_session: NamedDependency[AsyncSession]) -> ScheduleService:
     """Constructs repository and service objects for the schedule service."""
     return ScheduleService(ScheduleRepository(session=db_session), CalendarDateRepository(session=db_session))

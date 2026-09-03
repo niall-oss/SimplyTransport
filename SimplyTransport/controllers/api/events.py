@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from advanced_alchemy.filters import LimitOffset
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath, QueryParameter
 
@@ -24,8 +24,8 @@ class EventsController(Controller):
     )
     async def get_events(
         self,
-        repo: EventRepository,
-        limit_offset: LimitOffset,
+        repo: NamedDependency[EventRepository],
+        limit_offset: NamedDependency[LimitOffset],
         order: Annotated[
             Literal["desc", "asc"],
             QueryParameter(description="Order by descending or ascending"),
@@ -45,9 +45,9 @@ class EventsController(Controller):
     )
     async def get_events_by_type(
         self,
-        repo: EventRepository,
+        repo: NamedDependency[EventRepository],
         type: FromPath[EventType],
-        limit_offset: LimitOffset,
+        limit_offset: NamedDependency[LimitOffset],
         order: Annotated[
             Literal["desc", "asc"],
             QueryParameter(description="Order by descending or ascending"),
@@ -67,7 +67,7 @@ class EventsController(Controller):
     )
     async def get_most_recent_event_by_type(
         self,
-        repo: EventRepository,
+        repo: NamedDependency[EventRepository],
         type: FromPath[EventType],
     ) -> Event:
         result = await repo.get_most_recent_event_by_type(type)

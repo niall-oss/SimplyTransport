@@ -1,5 +1,5 @@
 from litestar import Controller, Response, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import HTTPException
 from litestar.response import File, Template
 
@@ -25,7 +25,7 @@ class RootController(Controller):
     @get("/", cache=120)
     async def root(
         self,
-        event_repo: EventRepository,
+        event_repo: NamedDependency[EventRepository],
     ) -> Template:
         events = await event_repo.get_multiple_pretty_events_by_types(
             [
@@ -88,8 +88,8 @@ class RootController(Controller):
         return Template("delays/explained.html")
 
     @get("/maps")
-    async def maps(self, agency_repo: AgencyRepository) -> Template:
-        agencies = await agency_repo.list()
+    async def maps(self, agency_repo: NamedDependency[AgencyRepository]) -> Template:
+        agencies = await agency_repo.get_many()
         all_agency = AgencyModel(id="All", name="All Agencies Combined")
         agencies.append(all_agency)
         return Template(

@@ -1,5 +1,5 @@
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath
 
@@ -15,18 +15,18 @@ class StopTimeController(Controller):
 
     @get("/trip/{trip_id:str}", summary="StopTimes by trip ID", raises=[NotFoundException])
     async def get_stop_time_by_trip_id(
-        self, repo: StopTimeRepository, trip_id: FromPath[str]
+        self, repo: NamedDependency[StopTimeRepository], trip_id: FromPath[str]
     ) -> list[StopTime]:
-        results = await repo.list(trip_id=trip_id)
+        results = await repo.get_many(trip_id=trip_id)
         if results is None or len(results) == 0:
             raise NotFoundException(detail=f"StopTimes not found for trip id {id}")
         return [StopTime.model_validate(obj) for obj in results]
 
     @get("/stop/{stop_id:str}", summary="StopTimes by stop ID", raises=[NotFoundException])
     async def get_stop_time_by_stop_id(
-        self, repo: StopTimeRepository, stop_id: FromPath[str]
+        self, repo: NamedDependency[StopTimeRepository], stop_id: FromPath[str]
     ) -> list[StopTime]:
-        results = await repo.list(stop_id=stop_id)
+        results = await repo.get_many(stop_id=stop_id)
         if results is None or len(results) == 0:
             raise NotFoundException(detail=f"StopTimes not found for stop id {id}")
         return [StopTime.model_validate(obj) for obj in results]

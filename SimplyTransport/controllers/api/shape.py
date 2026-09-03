@@ -1,7 +1,6 @@
-from typing import Any
-
+from advanced_alchemy.filters import OrderBy
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath
 
@@ -21,9 +20,12 @@ class ShapeController(Controller):
 
     @get("/{shape_id:str}", summary="List of Shapes by shape Id", raises=[NotFoundException])
     async def get_shape_by_shape_id(
-        self, repo: ShapeRepository, shape_id: FromPath[str], order_by_shape: Any
+        self,
+        repo: NamedDependency[ShapeRepository],
+        shape_id: FromPath[str],
+        order_by_shape: NamedDependency[OrderBy],
     ) -> list[Shape]:
-        result = await repo.list(order_by_shape, shape_id=shape_id)
+        result = await repo.get_many(order_by_shape, shape_id=shape_id)
         if not result or len(result) == 0:
             raise NotFoundException(detail=f"Shapes not found with id {shape_id}")
         return [Shape.model_validate(obj) for obj in result]

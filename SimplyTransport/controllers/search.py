@@ -4,7 +4,7 @@ from typing import Annotated
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.params import QueryParameter
 from litestar.response import Template
 
@@ -26,8 +26,8 @@ class SearchController(Controller):
     @get("/stops")
     async def stops(
         self,
-        stop_repo: StopRepository,
-        limit_offset: LimitOffset,
+        stop_repo: NamedDependency[StopRepository],
+        limit_offset: NamedDependency[LimitOffset],
         search: Annotated[
             str,
             QueryParameter(name="search", description="Search string to search by name or code"),
@@ -73,8 +73,8 @@ class SearchController(Controller):
     @get("/routes")
     async def routes(
         self,
-        route_repo: RouteRepository,
-        limit_offset: LimitOffset,
+        route_repo: NamedDependency[RouteRepository],
+        limit_offset: NamedDependency[LimitOffset],
         search: Annotated[
             str,
             QueryParameter(name="search", description="Search string to search by name or code"),

@@ -1,6 +1,7 @@
 from datetime import time
 from typing import Any
 
+from litestar.di import NamedDependency
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -120,7 +121,7 @@ class ScheduleRepository:
         return [_static_schedule_from_row(row) for row in result]
 
 
-async def provide_schedule_repo(db_session: AsyncSession) -> ScheduleRepository:
+async def provide_schedule_repo(db_session: NamedDependency[AsyncSession]) -> ScheduleRepository:
     """This provides the Schedule repository."""
 
     return ScheduleRepository(session=db_session)

@@ -1,6 +1,7 @@
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -28,7 +29,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
     ) -> tuple[list[StopModel], int]:
         """List stops that start with name/code."""
 
-        results, total = await self.list_and_count(
+        results, total = await self.get_many_and_count(
             StopModel.name.istartswith(search) | StopModel.code.istartswith(search),
             limit_offset,
             OrderBy(StopModel.code, "asc"),  # type: ignore
@@ -42,7 +43,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
     async def get_stops_by_route_id(self, route_id: str, direction: int) -> list[StopModel]:
         """Get stops by route_id."""
 
-        return await self.list(
+        return await self.get_many(
             statement=select(StopModel)
             .join(StopTimeModel, StopTimeModel.stop_id == StopModel.id)
             .join(TripModel, TripModel.id == StopTimeModel.trip_id)
@@ -54,7 +55,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
     async def get_stops_by_route_ids(self, route_ids: list[str], direction: int) -> list[StopModel]:
         """Get stops by route_ids."""
 
-        return await self.list(
+        return await self.get_many(
             statement=select(StopModel)
             .join(StopTimeModel, StopTimeModel.stop_id == StopModel.id)
             .join(TripModel, TripModel.id == StopTimeModel.trip_id)
@@ -100,12 +101,12 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
     async def get_all_with_stop_feature(self) -> list[StopModel]:
         """Get all stops with stop features."""
 
-        return await self.list(statement=select(StopModel))
+        return await self.get_many(statement=select(StopModel))
 
     async def get_stops_with_realtime_displays(self) -> list[StopModel]:
         """Get stops by realtime displays."""
 
-        return await self.list(
+        return await self.get_many(
             statement=select(StopModel)
             .join(StopFeatureModel, StopFeatureModel.stop_id == StopModel.id)
             .where(StopFeatureModel.rtpi_active == True)  # noqa: E712
@@ -114,7 +115,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
     async def get_stops_with_shelters(self) -> list[StopModel]:
         """Get stops by realtime displays."""
 
-        return await self.list(
+        return await self.get_many(
             statement=select(StopModel)
             .join(StopFeatureModel, StopFeatureModel.stop_id == StopModel.id)
             .where(StopFeatureModel.shelter_active == True)  # noqa: E712
@@ -123,7 +124,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
     async def get_stops_that_are_unsurveyed(self) -> list[StopModel]:
         """Get stops by realtime displays."""
 
-        return await self.list(
+        return await self.get_many(
             statement=select(StopModel)
             .join(StopFeatureModel, StopFeatureModel.stop_id == StopModel.id)
             .where(StopFeatureModel.surveyed == False)  # noqa: E712
@@ -135,7 +136,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
         """Get stops near a location."""
         min_max_coordinates = calculate_min_max_coordinates(latitude, longitude, distance_in_meters)
 
-        potential_stops = await self.list(
+        potential_stops = await self.get_many(
             statement=select(StopModel)
             .where(StopModel.lat.between(min_max_coordinates.min_latitude, min_max_coordinates.max_latitude))
             .where(
@@ -154,7 +155,7 @@ class StopRepository(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type
         return stops
 
 
-async def provide_stop_repo(db_session: AsyncSession) -> StopRepository:
+async def provide_stop_repo(db_session: NamedDependency[AsyncSession]) -> StopRepository:
     """This provides the Stop repository."""
 
     return StopRepository(session=db_session)

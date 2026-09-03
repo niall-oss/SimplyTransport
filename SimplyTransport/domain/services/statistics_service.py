@@ -1,3 +1,4 @@
+from litestar.di import NamedDependency
 from SimplyTransport.domain.database_statistics.model import (
     DatabaseStatisticModel,
     DatabaseStatisticWithPercentage,
@@ -149,7 +150,7 @@ class StatisticsService:
 
 
 async def provide_statistics_service(
-    db_session: AsyncSession, timescale_db_session: AsyncSession
+    db_session: NamedDependency[AsyncSession], timescale_db_session: NamedDependency[AsyncSession]
 ) -> StatisticsService:
     """
     Provides a StatisticsService instance.

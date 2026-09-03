@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.params import FromPath
 from litestar.response import Template
 
@@ -23,7 +23,9 @@ class MapsController(Controller):
     }
 
     @get("/agency/route/{agency_id:str}")
-    async def agency_maps(self, agency_repo: AgencyRepository, agency_id: FromPath[str]) -> Template:
+    async def agency_maps(
+        self, agency_repo: NamedDependency[AgencyRepository], agency_id: FromPath[str]
+    ) -> Template:
         if agency_id != "All":
             try:
                 agency = await agency_repo.get(agency_id)

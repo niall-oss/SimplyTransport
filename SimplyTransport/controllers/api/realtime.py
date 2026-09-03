@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import ValidationException
 from litestar.params import FromPath
 
@@ -31,8 +31,8 @@ class RealtimeController(Controller):
     @get("/{stop_id:str}", summary="Get realtime schedule for a stop", raises=[ValidationException])
     async def get_realtime_schedule_by_stop_id(
         self,
-        schedule_service: ScheduleService,
-        realtime_service: RealTimeService,
+        schedule_service: NamedDependency[ScheduleService],
+        realtime_service: NamedDependency[RealTimeService],
         stop_id: FromPath[str],
         start_time: StartTimeQuery = None,
         end_time: EndTimeQuery = None,

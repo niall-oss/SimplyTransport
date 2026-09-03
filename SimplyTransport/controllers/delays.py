@@ -1,5 +1,5 @@
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.params import FromPath
 from litestar.response import Template
 
@@ -24,7 +24,7 @@ class DelaysController(Controller):
     async def delays_route(
         self,
         route_code: FromPath[str],
-        repo: TSStopTimeRepository,
+        repo: NamedDependency[TSStopTimeRepository],
     ) -> Template:
         result = await repo.get_aggregated_delay_on_stop_on_route_on_time(route_code=route_code)
 

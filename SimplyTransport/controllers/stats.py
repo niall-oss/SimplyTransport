@@ -1,5 +1,5 @@
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.response import Template
 
 from ..domain.database_statistics.repo import DatabaseStatisticRepository, provide_database_statistic_repo
@@ -32,7 +32,9 @@ class StatsController(Controller):
         name="stats.static_stats",
     )
     async def static_stats(
-        self, stats_repo: DatabaseStatisticRepository, stats_service: StatisticsService
+        self,
+        stats_repo: NamedDependency[DatabaseStatisticRepository],
+        stats_service: NamedDependency[StatisticsService],
     ) -> Template:
         stats = await stats_repo.get_statistics_most_recent_by_type(StatisticType.GTFS_RECORD_COUNTS)
         stats_with_percentages = stats_service.convert_stats_to_stats_with_percentage_totals(stats)
@@ -50,7 +52,9 @@ class StatsController(Controller):
         name="stats.operator_stats",
     )
     async def operator_stats(
-        self, stats_repo: DatabaseStatisticRepository, stats_service: StatisticsService
+        self,
+        stats_repo: NamedDependency[DatabaseStatisticRepository],
+        stats_service: NamedDependency[StatisticsService],
     ) -> Template:
         routes = await stats_repo.get_statistics_most_recent_by_type(StatisticType.OPERATOR_ROUTE_COUNTS)
         routes_with_percentages = stats_service.convert_stats_to_stats_with_percentage_totals(
@@ -80,9 +84,9 @@ class StatsController(Controller):
     )
     async def stop_features(
         self,
-        stats_repo: DatabaseStatisticRepository,
-        stats_service: StatisticsService,
-        stop_repo: StopRepository,
+        stats_repo: NamedDependency[DatabaseStatisticRepository],
+        stats_service: NamedDependency[StatisticsService],
+        stop_repo: NamedDependency[StopRepository],
     ) -> Template:
         stats = await stats_repo.get_statistics_most_recent_by_type(StatisticType.STOP_FEATURE_COUNTS)
         total_stop_count = await stop_repo.count()
@@ -105,9 +109,9 @@ class StatsController(Controller):
     )
     async def delays(
         self,
-        stats_repo: DatabaseStatisticRepository,
-        stats_service: StatisticsService,
-        ts_stop_time_repo: TSStopTimeRepository,
+        stats_repo: NamedDependency[DatabaseStatisticRepository],
+        stats_service: NamedDependency[StatisticsService],
+        ts_stop_time_repo: NamedDependency[TSStopTimeRepository],
     ) -> Template:
         stats = await stats_repo.get_statistics_most_recent_by_type(StatisticType.DELAY_RECORD_COUNTS)
         total_delay_count = await ts_stop_time_repo.get_total_delay_record_count()

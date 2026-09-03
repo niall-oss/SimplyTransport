@@ -3,6 +3,7 @@ from itertools import cycle
 from typing import Literal
 
 from advanced_alchemy.exceptions import NotFoundError
+from litestar.di import NamedDependency
 from SimplyTransport.api_contract.map_payloads import (
     AgencyRoutesMapPayload,
     GeoJSONLineString,
@@ -374,7 +375,9 @@ class MapService:
         )
 
 
-async def provide_map_service(db_session: AsyncSession, redis_service: RedisService) -> MapService:
+async def provide_map_service(
+    db_session: NamedDependency[AsyncSession], redis_service: NamedDependency[RedisService]
+) -> MapService:
     """
     Provides a map service instance.
 
