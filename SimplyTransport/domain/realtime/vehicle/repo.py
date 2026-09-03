@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -83,7 +84,7 @@ class RTVehicleRepository(SQLAlchemyAsyncRepository[RTVehicleModel]):  # type: i
     model_type = RTVehicleModel
 
 
-async def provide_rt_vehicle_repo(db_session: AsyncSession) -> RTVehicleRepository:
+async def provide_rt_vehicle_repo(db_session: NamedDependency[AsyncSession]) -> RTVehicleRepository:
     """This provides the RTVehicle repository."""
 
     return RTVehicleRepository(session=db_session)

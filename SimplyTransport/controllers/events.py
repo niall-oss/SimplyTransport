@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import ValidationException
 from litestar.params import QueryParameter
 from litestar.response import Template
@@ -36,8 +36,8 @@ class EventsController(Controller):
     @get("/search")
     async def search(
         self,
-        event_repo: EventRepository,
-        limit_offset: LimitOffset,
+        event_repo: NamedDependency[EventRepository],
+        limit_offset: NamedDependency[LimitOffset],
         search_type: Annotated[
             str | None,
             QueryParameter(name="search_type", description="Search events by type"),

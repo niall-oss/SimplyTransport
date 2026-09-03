@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+from litestar.di import NamedDependency
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..realtime.enums import REMOVED_TRIP_RELATIONSHIPS, OnTimeStatus
@@ -111,7 +112,7 @@ class RealTimeService:
         return await self.realtime_schedule_repository.get_distinct_realtime_trips()
 
 
-async def provide_realtime_service(db_session: AsyncSession) -> RealTimeService:
+async def provide_realtime_service(db_session: NamedDependency[AsyncSession]) -> RealTimeService:
     """Constructs repository and service objects for the realtime service."""
 
     return RealTimeService(

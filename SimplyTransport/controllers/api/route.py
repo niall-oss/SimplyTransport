@@ -2,7 +2,7 @@ from typing import Annotated
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath, QueryParameter
 
@@ -26,18 +26,18 @@ class RouteController(Controller):
     )
     async def get_all_routes(
         self,
-        repo: RouteRepository,
+        repo: NamedDependency[RouteRepository],
         agency_id: Annotated[
             str | None,
             QueryParameter(name="agencyId", description="Optional: Agency ID to filter by"),
         ] = None,
     ) -> list[Route]:
         if agency_id:
-            result = await repo.list(agency_id=agency_id)
+            result = await repo.get_many(agency_id=agency_id)
             if not result or len(result) == 0:
                 raise NotFoundException(detail=f"Routes not found with agency id {agency_id}")
         else:
-            result = await repo.list()
+            result = await repo.get_many()
         return [Route.model_validate(obj) for obj in result]
 
     @get(
@@ -48,22 +48,22 @@ class RouteController(Controller):
     )
     async def get_all_routes_and_count(
         self,
-        repo: RouteRepository,
+        repo: NamedDependency[RouteRepository],
         agency_id: Annotated[
             str | None,
             QueryParameter(name="agencyId", description="Optional: Agency ID to filter by"),
         ] = None,
     ) -> RouteWithTotal:
         if agency_id:
-            result, total = await repo.list_and_count(agency_id=agency_id)
+            result, total = await repo.get_many_and_count(agency_id=agency_id)
             if not result or len(result) == 0:
                 raise NotFoundException(detail=f"Routes not found with agency id {agency_id}")
         else:
-            result, total = await repo.list_and_count()
+            result, total = await repo.get_many_and_count()
         return RouteWithTotal(total=total, routes=[Route.model_validate(obj) for obj in result])
 
     @get("/{id:str}", summary="Route by ID", raises=[NotFoundException])
-    async def get_route_by_id(self, repo: RouteRepository, id: FromPath[str]) -> Route:
+    async def get_route_by_id(self, repo: NamedDependency[RouteRepository], id: FromPath[str]) -> Route:
         try:
             result = await repo.get(id)
         except NotFoundError as e:

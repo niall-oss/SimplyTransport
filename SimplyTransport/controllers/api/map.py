@@ -2,7 +2,7 @@ from typing import Annotated
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar import Controller, MediaType, Request, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException, ValidationException
 from litestar.params import FromPath, QueryParameter
 
@@ -53,7 +53,7 @@ class MapController(Controller):
     )
     async def nearby_map_data(
         self,
-        map_service: MapService,
+        map_service: NamedDependency[MapService],
         latitude: Annotated[float, QueryParameter(name="latitude", description="Latitude")],
         longitude: Annotated[float, QueryParameter(name="longitude", description="Longitude")],
         radius_meters: Annotated[
@@ -80,7 +80,7 @@ class MapController(Controller):
         ),
     )
     async def static_stops_map_data(
-        self, map_type: FromPath[StaticStopMapTypes], map_service: MapService
+        self, map_type: FromPath[StaticStopMapTypes], map_service: NamedDependency[MapService]
     ) -> StaticStopsMapPayload:
         return await map_service.build_static_stop_map_payload(map_type)
 
@@ -93,7 +93,9 @@ class MapController(Controller):
         cache=_MAP_JSON_VEHICLE_TTL_S,
         cache_key_builder=key_builder_from_path(CacheKeys.StopMaps.STOP_MAP_KEY_TEMPLATE, "stop_id"),
     )
-    async def stop_map_data(self, stop_id: FromPath[str], map_service: MapService) -> StopMapPayload:
+    async def stop_map_data(
+        self, stop_id: FromPath[str], map_service: NamedDependency[MapService]
+    ) -> StopMapPayload:
         try:
             payload = await map_service.build_stop_map_payload(stop_id)
         except NotFoundError as e:
@@ -116,7 +118,7 @@ class MapController(Controller):
         ),
     )
     async def route_map_data(
-        self, route_id: FromPath[str], direction: FromPath[int], map_service: MapService
+        self, route_id: FromPath[str], direction: FromPath[int], map_service: NamedDependency[MapService]
     ) -> RouteMapPayload:
         try:
             return await map_service.build_route_map_payload(route_id, direction)
@@ -137,7 +139,7 @@ class MapController(Controller):
         ),
     )
     async def agency_routes_map_data(
-        self, agency_id: FromPath[str], map_service: MapService
+        self, agency_id: FromPath[str], map_service: NamedDependency[MapService]
     ) -> AgencyRoutesMapPayload:
         try:
             return await map_service.build_agency_routes_map_payload(agency_id)

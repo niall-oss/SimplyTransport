@@ -1,6 +1,7 @@
 from datetime import date
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import Subquery, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import select
@@ -231,7 +232,7 @@ class DatabaseStatisticRepository(SQLAlchemyAsyncRepository[DatabaseStatisticMod
 
 
 async def provide_database_statistic_repo(
-    db_session: AsyncSession,
+    db_session: NamedDependency[AsyncSession],
 ) -> DatabaseStatisticRepository:
     """This provides the Database Statistic repository."""
 

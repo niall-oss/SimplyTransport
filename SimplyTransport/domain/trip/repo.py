@@ -2,6 +2,7 @@ from collections.abc import Sequence
 
 from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from litestar.di import NamedDependency
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +45,7 @@ class TripRepository(SQLAlchemyAsyncRepository[TripModel]):  # type: ignore[type
     model_type = TripModel
 
 
-async def provide_trip_repo(db_session: AsyncSession) -> TripRepository:
+async def provide_trip_repo(db_session: NamedDependency[AsyncSession]) -> TripRepository:
     """This provides the Trip repository."""
 
     return TripRepository(session=db_session)

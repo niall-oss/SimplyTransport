@@ -1,5 +1,5 @@
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException, ValidationException
 from litestar.params import FromPath
 
@@ -42,7 +42,7 @@ class DelaysController(Controller):
         self,
         stop_id: FromPath[str],
         route_code: FromPath[str],
-        repo: TSStopTimeRepository,
+        repo: NamedDependency[TSStopTimeRepository],
         scheduled_time: ScheduledTimePath,
         start_time: StartDateTimeQuery = None,
         end_time: EndDateTimeQuery = None,
@@ -74,7 +74,7 @@ class DelaysController(Controller):
         self,
         stop_id: FromPath[str],
         route_code: FromPath[str],
-        repo: TSStopTimeRepository,
+        repo: NamedDependency[TSStopTimeRepository],
         scheduled_time: ScheduledTimePath,
         start_time: StartDateTimeQuery = None,
         end_time: EndDateTimeQuery = None,
@@ -108,7 +108,7 @@ class DelaysController(Controller):
         self,
         stop_id: FromPath[str],
         route_code: FromPath[str],
-        repo: TSStopTimeRepository,
+        repo: NamedDependency[TSStopTimeRepository],
         scheduled_time: ScheduledTimePath,
         start_time: StartDateTimeQuery = None,
         end_time: EndDateTimeQuery = None,
@@ -134,7 +134,7 @@ class DelaysController(Controller):
     async def get_aggregated_delay_on_route(
         self,
         route_code: FromPath[str],
-        repo: TSStopTimeRepository,
+        repo: NamedDependency[TSStopTimeRepository],
         start_time: StartDateTimeQuery = None,
         end_time: EndDateTimeQuery = None,
     ) -> TS_StopTimeDelayAggregated:

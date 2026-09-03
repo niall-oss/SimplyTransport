@@ -1,7 +1,7 @@
 import datetime
 
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath
 
@@ -22,7 +22,7 @@ class StatisticsController(Controller):
         raises=[NotFoundException],
     )
     async def get_statistics_most_recent(
-        self, repo: DatabaseStatisticRepository, key: FromPath[StatisticType]
+        self, repo: NamedDependency[DatabaseStatisticRepository], key: FromPath[StatisticType]
     ) -> list[DatabaseStatistic]:
         result = await repo.get_statistics_most_recent_by_type(key)
 
@@ -38,7 +38,10 @@ class StatisticsController(Controller):
         raises=[NotFoundException],
     )
     async def get_statistics_by_day(
-        self, repo: DatabaseStatisticRepository, key: FromPath[StatisticType], date: FromPath[datetime.date]
+        self,
+        repo: NamedDependency[DatabaseStatisticRepository],
+        key: FromPath[StatisticType],
+        date: FromPath[datetime.date],
     ) -> list[DatabaseStatistic]:
         result = await repo.get_statistics_by_type_and_date(key, date)
 

@@ -3,6 +3,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from litestar.di import NamedDependency
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -149,7 +150,9 @@ class RealtimeScheduleRepository:
         return [trip[0] for trip in result]
 
 
-async def provide_schedule_update_repo(db_session: AsyncSession) -> RealtimeScheduleRepository:
+async def provide_schedule_update_repo(
+    db_session: NamedDependency[AsyncSession],
+) -> RealtimeScheduleRepository:
     """This provides the RealtimeSchedule repository."""
 
     return RealtimeScheduleRepository(session=db_session)

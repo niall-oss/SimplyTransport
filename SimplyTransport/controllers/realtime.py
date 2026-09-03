@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar import Controller, get
-from litestar.di import Provide
+from litestar.di import NamedDependency, Provide
 from litestar.params import FromPath, FromQuery
 from litestar.response import Template
 
@@ -47,8 +47,8 @@ class RealtimeController(Controller):
     async def realtime_stop(
         self,
         stop_id: FromPath[str],
-        stop_repo: StopRepository,
-        route_repo: RouteRepository,
+        stop_repo: NamedDependency[StopRepository],
+        route_repo: NamedDependency[RouteRepository],
     ) -> Template:
         try:
             stop = await stop_repo.get_by_id_with_stop_feature(stop_id)
@@ -81,9 +81,9 @@ class RealtimeController(Controller):
     async def realtime_stop_table(
         self,
         stop_id: FromPath[str],
-        stop_repo: StopRepository,
-        schedule_service: ScheduleService,
-        realtime_service: RealTimeService,
+        stop_repo: NamedDependency[StopRepository],
+        schedule_service: NamedDependency[ScheduleService],
+        realtime_service: NamedDependency[RealTimeService],
     ) -> Template:
         try:
             await stop_repo.get_by_id_with_stop_feature(stop_id)
@@ -130,7 +130,7 @@ class RealtimeController(Controller):
     async def realtime_stop_schedule(
         self,
         stop_id: FromPath[str],
-        schedule_service: ScheduleService,
+        schedule_service: NamedDependency[ScheduleService],
         day: FromQuery[DayOfWeek | None] = None,
     ) -> Template:
         if day is None:
@@ -158,8 +158,8 @@ class RealtimeController(Controller):
         self,
         route_id: FromPath[str],
         direction: FromPath[Direction],
-        route_repo: RouteRepository,
-        stop_repo: StopRepository,
+        route_repo: NamedDependency[RouteRepository],
+        stop_repo: NamedDependency[StopRepository],
     ) -> Template:
         try:
             route = await route_repo.get_by_id_with_agency(route_id)
@@ -185,8 +185,8 @@ class RealtimeController(Controller):
     async def realtime_trip(
         self,
         trip_id: FromPath[str],
-        schedule_service: ScheduleService,
-        realtime_service: RealTimeService,
+        schedule_service: NamedDependency[ScheduleService],
+        realtime_service: NamedDependency[RealTimeService],
     ) -> Template:
         schedules = await schedule_service.get_by_trip_id(trip_id=trip_id)
 

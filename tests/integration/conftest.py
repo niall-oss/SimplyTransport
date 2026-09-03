@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import subprocess
+import time
 from collections import abc
 from pathlib import Path
 
@@ -17,9 +18,9 @@ COMPOSE_FILE = REPO_ROOT / "docker-compose.test.yaml"
 GTFS_FIXTURE_DIR = REPO_ROOT / "tests" / "gtfs_test_data" / "TFI"
 
 TEST_ENV = {
-    "DB_URL": "postgresql+asyncpg://st_test:st_test@localhost:15432/st_database",
-    "DB_URL_SYNC": "postgresql+psycopg2://st_test:st_test@localhost:15432/st_database",
-    "TIMESCALE_URL": "postgresql+asyncpg://st_test:st_test@localhost:15433/st_ts_database",
+    "DB_URL": "postgresql+asyncpg://st_test:st_test@127.0.0.1:15432/st_database",
+    "DB_URL_SYNC": "postgresql+psycopg2://st_test:st_test@127.0.0.1:15432/st_database",
+    "TIMESCALE_URL": "postgresql+asyncpg://st_test:st_test@127.0.0.1:15433/st_ts_database",
     "REDIS_HOST": "127.0.0.1",
     "REDIS_PORT": "16379",
     "REDIS_PASSWORD": "",
@@ -62,6 +63,34 @@ def _apply_test_env() -> None:
     reset_timescale_engines()
 
 
+def _wait_for_sql(sync_url: str, *, attempts: int = 40, delay_s: float = 0.5) -> None:
+    """pg_isready can pass before Timescale finishes restarting after init."""
+    from sqlalchemy import create_engine, text
+
+    last_error: Exception | None = None
+    engine = create_engine(sync_url, pool_pre_ping=True)
+    try:
+        for _ in range(attempts):
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                return
+            except Exception as exc:
+                last_error = exc
+                time.sleep(delay_s)
+    finally:
+        engine.dispose()
+    raise RuntimeError(f"Timed out waiting for a SQL connection to {sync_url}") from last_error
+
+
+def _wait_for_stack() -> None:
+    from SimplyTransport.lib import settings
+
+    _wait_for_sql(settings.app.DB_URL_SYNC)
+    timescale_sync_url = settings.app.TIMESCALE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    _wait_for_sql(timescale_sync_url)
+
+
 def _seed_database() -> None:
     from SimplyTransport.lib.db.database import get_async_engine, reset_engines
     from SimplyTransport.lib.db.services import create_database_sync
@@ -102,7 +131,15 @@ def _start_stack() -> None:
         raise RuntimeError(f"Failed to start the integration test Docker stack.\n{up.stdout}\n{up.stderr}")
     _stack_started = True
     _apply_test_env()
-    _seed_database()
+    try:
+        _wait_for_stack()
+        _seed_database()
+    except Exception:
+        logs = _compose("logs", "--no-color")
+        print(f"Test stack logs:\n{logs.stdout}\n{logs.stderr}")
+        _compose("down", "-v")
+        _stack_started = False
+        raise
 
 
 def _stop_stack() -> None:
