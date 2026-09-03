@@ -82,7 +82,7 @@ async def import_gtfs_dataset(directory: str) -> None:
             rp.TimeElapsedColumn(),
         ) as progress:
             task = progress.add_task("[red]Clearing database table...", total=1)
-            importer.clear_table()
+            await importer.clear_table()
             progress.update(task, advance=1)
 
         await importer.import_data()

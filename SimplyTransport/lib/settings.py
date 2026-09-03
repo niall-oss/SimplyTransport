@@ -20,7 +20,6 @@ class AppSettings(BaseSettings):
 
     # Database
     DB_URL: str = "postgresql+asyncpg://user:password@localhost:5432/st_database"
-    DB_URL_SYNC: str = "postgresql+psycopg2://user:password@localhost:5432/st_database"
     DB_ECHO: bool = False
     TIMESCALE_URL: str = "postgresql+asyncpg://user:password@localhost:5433/st_ts_database"
 

@@ -102,7 +102,6 @@ class CLIPlugin(CLIPluginProtocol):
                 table.add_row("Debug", str(settings.app.DEBUG), style=debug_style)
                 table.add_row("Environment", settings.app.ENVIRONMENT)
                 table.add_row("Database URL", settings.app.DB_URL)
-                table.add_row("Database SYNC URL", settings.app.DB_URL_SYNC)
                 table.add_row("Database Echo", str(settings.app.DB_ECHO))
                 table.add_row("Log Level", settings.app.LOG_LEVEL)
 

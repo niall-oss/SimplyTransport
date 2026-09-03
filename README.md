@@ -139,7 +139,7 @@ This extends the standard litestar cli. You can view all the commands by just ru
 
 > [!NOTE]
 > Requires **Python 3.14.3** (not a pre-release alpha/beta). [uv](https://github.com/astral-sh/uv) is used in CI and is recommended locally: `uv python install 3.14.3` then `uv venv --python 3.14.3` (or `uv venv`—see [`.python-version`](.python-version)).
-> On **Ubuntu/Linux** servers, install **`libpq-dev`** before `pip`/`uv pip install` if PostgreSQL-related wheels are missing and builds fail—see [deployment_linux/README.md](deployment_linux/README.md) (PostgreSQL client section).
+> On **Ubuntu/Linux** servers, install build tools before `pip`/`uv pip install` if native-extension wheels are missing—see [deployment_linux/README.md](deployment_linux/README.md).
 
 First clone down the project in your desired directory
 
@@ -193,7 +193,6 @@ Notice how the `POSTGRES_` variables and the `TIMESCALE_` map into the URL you'r
 ```
 # Database
 DB_URL=postgresql+asyncpg://example2:example3@localhost:5432/example1
-DB_URL_SYNC=postgresql+psycopg2://example2:example3@localhost:5432/example1
 DB_ECHO=false
 TIMESCALE_URL=postgresql+asyncpg://example:example@localhost:5433/example
 
@@ -508,6 +507,7 @@ Here is an example in `test_root.py`
 
 ```python
 from litestar.testing import TestClient
+
 
 def test_root_200(client: TestClient) -> None:
     response = client.get("/")

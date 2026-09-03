@@ -4,7 +4,6 @@ FROM python:3.14.3-slim as builder
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
     curl \
-    libpq-dev \
     python3-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
@@ -28,7 +27,6 @@ WORKDIR /app
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y \
     curl \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
