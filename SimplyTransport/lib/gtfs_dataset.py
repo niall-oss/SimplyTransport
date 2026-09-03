@@ -3,9 +3,8 @@ import time
 from pathlib import Path
 
 import rich.progress as rp
-from rich.console import Console
-
 import SimplyTransport.lib.gtfs_importers as imp
+from rich.console import Console
 from SimplyTransport.domain.events.event_types import EventType
 from SimplyTransport.domain.events.repo import create_event_with_session
 from SimplyTransport.domain.services.statistics_service import provide_statistics_service
@@ -119,7 +118,9 @@ async def import_gtfs_dataset(directory: str) -> None:
         await redis_service.delete_keys_by_pattern(
             CacheKeys.StaticMaps.STATIC_MAP_AGENCY_ROUTE_DELETE_ALL_KEY_TEMPLATE
         )
-        await redis_service.delete_keys_by_pattern(CacheKeys.StaticMaps.STATIC_MAP_STOP_DELETE_ALL_KEY_TEMPLATE)
+        await redis_service.delete_keys_by_pattern(
+            CacheKeys.StaticMaps.STATIC_MAP_STOP_DELETE_ALL_KEY_TEMPLATE
+        )
         await redis_service.delete_keys_by_pattern(CacheKeys.StopApi.DETAILED_DELETE_ALL_KEY_TEMPLATE)
         await redis_service.delete_keys_by_pattern(CacheKeys.RealTime.REALTIME_ROUTE_DELETE_ALL_KEY_TEMPLATE)
 

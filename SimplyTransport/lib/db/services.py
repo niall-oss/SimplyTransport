@@ -2,10 +2,9 @@ import asyncio
 from collections.abc import AsyncGenerator
 
 from advanced_alchemy.base import UUIDBase
+from SimplyTransport.lib import settings
 from sqlalchemy import MetaData, create_engine, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
-
-from SimplyTransport.lib import settings
 
 from .database import get_async_engine, get_sync_engine
 from .timescale_database import get_async_timescale_engine
@@ -59,12 +58,8 @@ def create_database_sync() -> None:
         )
         raise e
 
-    timescale_sync_url = settings.app.TIMESCALE_URL.replace(
-        "postgresql+asyncpg://", "postgresql+psycopg2://"
-    )
-    timescale_engine = create_engine(
-        timescale_sync_url, echo=settings.app.DB_ECHO, pool_pre_ping=True
-    )
+    timescale_sync_url = settings.app.TIMESCALE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    timescale_engine = create_engine(timescale_sync_url, echo=settings.app.DB_ECHO, pool_pre_ping=True)
     try:
         UUIDBase.metadata.create_all(bind=timescale_engine)
     except ConnectionRefusedError as e:
