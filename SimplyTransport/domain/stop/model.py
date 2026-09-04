@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
-from advanced_alchemy.base import BigIntAuditBase
-from sqlalchemy import Float, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from advanced_alchemy.base import BigIntBase
+from sqlalchemy import Float, Index, Integer, String
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from ..enums import LocationType
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 __all__ = ["StopModel"]
 
 
-class StopModel(BigIntAuditBase):
+class StopModel(BigIntBase):
     __tablename__: str = "stop"  # type: ignore[assignment]
     __table_args__ = (Index("idx_stop_coordinates", "lat", "lon"),)
 
@@ -27,12 +27,17 @@ class StopModel(BigIntAuditBase):
     zone_id: Mapped[str | None] = mapped_column(String(length=1000))
     url: Mapped[str | None] = mapped_column(String(length=1000))
     location_type: Mapped[LocationType | None] = mapped_column(Integer)
-    parent_station: Mapped[str | None] = mapped_column(String(length=1000), ForeignKey("stop.id"))
+    parent_station: Mapped[str | None] = mapped_column(String(length=1000))
     stop_times: Mapped[list[StopTimeModel]] = relationship(
         back_populates="stop",
         cascade="all, delete-orphan",
         passive_deletes=True,
+        primaryjoin=lambda: StopModel.id == foreign(StopTimeModel.stop_id),
+        foreign_keys=lambda: [StopTimeModel.stop_id],
     )
     rt_stop_times: Mapped[list[RTStopTimeModel]] = relationship(back_populates="stop")
     stop_feature: Mapped[StopFeatureModel] = relationship(back_populates="stop")
     dataset: Mapped[str] = mapped_column(String(length=80), index=True)
+
+
+from ..stop_times.model import StopTimeModel as StopTimeModel  # noqa: E402

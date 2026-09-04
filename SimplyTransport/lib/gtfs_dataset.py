@@ -66,7 +66,9 @@ async def import_gtfs_dataset(directory: str) -> None:
         generic_importer = imp.GTFSImporter(file, directory)
         reader = generic_importer.get_reader()
         try:
-            importer = imp.get_importer_for_file(file, reader, None, dataset)
+            importer = imp.get_importer_for_file(
+                file, reader, None, dataset, file_path=generic_importer.file_path()
+            )
         except ValueError:
             console.print(f"\n[red]Error: File '{file}' does not have a supported importer. Skipping...")
             attributes_of_total_rows[file.replace(".txt", "")] = {
