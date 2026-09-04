@@ -1,7 +1,8 @@
 import asyncio
 
+import rich.progress as rp
 from advanced_alchemy.base import UUIDBase
-from sqlalchemy import Connection, MetaData, Table, text
+from sqlalchemy import Connection, Table, text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .database import get_async_engine
@@ -43,6 +44,59 @@ async def create_database_tables() -> None:
         raise e
 
 
+def _model_tables(table_name: str | None) -> list[Table]:
+    tables = UUIDBase.metadata.tables
+    if table_name is not None:
+        return [tables[table_name]]
+    return list(tables.values())
+
+
+def _drop_secondary_indexes_sync(sync_conn: Connection, table_name: str) -> None:
+    table = UUIDBase.metadata.tables[table_name]
+    for index in table.indexes:
+        index.drop(bind=sync_conn, checkfirst=True)
+
+
+def _create_secondary_indexes_sync(sync_conn: Connection, table_name: str) -> None:
+    table = UUIDBase.metadata.tables[table_name]
+    for index in table.indexes:
+        index.create(bind=sync_conn, checkfirst=True)
+
+
+async def drop_secondary_indexes(table_name: str) -> None:
+    """Drop non-primary-key indexes defined on the model for ``table_name``."""
+    engine = get_async_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(_drop_secondary_indexes_sync, table_name)
+
+
+async def create_secondary_indexes(table_name: str) -> None:
+    """Create non-primary-key indexes defined on the model for ``table_name``."""
+    indexes = list(UUIDBase.metadata.tables[table_name].indexes)
+    if not indexes:
+        return
+
+    engine = get_async_engine()
+    with rp.Progress(
+        rp.SpinnerColumn(finished_text="✅"),
+        "[progress.description]{task.description}",
+        rp.BarColumn(),
+        rp.MofNCompleteColumn(),
+        "|| Taken:",
+        rp.TimeElapsedColumn(),
+    ) as progress:
+        task = progress.add_task(f"[cyan]Rebuilding {table_name} indexes...", total=len(indexes))
+        async with engine.begin() as conn:
+            await conn.execute(text("SET LOCAL maintenance_work_mem = '256MB'"))
+            for index in indexes:
+
+                def _create(sync_conn: Connection, idx=index) -> None:
+                    idx.create(bind=sync_conn, checkfirst=True)
+
+                await conn.run_sync(_create)
+                progress.update(task, advance=1)
+
+
 async def recreate_indexes(table_name: str | None = None) -> None:
     """Recreate all indexes
 
@@ -54,21 +108,13 @@ async def recreate_indexes(table_name: str | None = None) -> None:
     engine = get_async_engine()
 
     def _recreate(sync_conn: Connection) -> None:
-        metadata = MetaData()
-        metadata.reflect(bind=sync_conn)
-        tables: list[Table] = (
-            [metadata.tables[table_name]] if table_name is not None else list(metadata.tables.values())
-        )
-        for table in tables:
-            indexes = list(table.indexes)
-            for index in indexes:
-                index.drop(bind=sync_conn)
-            for index in indexes:
-                index.create(bind=sync_conn)
+        for table in _model_tables(table_name):
+            _drop_secondary_indexes_sync(sync_conn, table.name)
+            _create_secondary_indexes_sync(sync_conn, table.name)
 
-    async with engine.connect() as conn:
+    async with engine.begin() as conn:
+        await conn.execute(text("SET LOCAL maintenance_work_mem = '256MB'"))
         await conn.run_sync(_recreate)
-        await conn.commit()
 
 
 async def test_database_connections():

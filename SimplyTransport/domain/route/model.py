@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
-from advanced_alchemy.base import BigIntAuditBase
-from sqlalchemy import ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from advanced_alchemy.base import BigIntBase
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from ..enums import RouteType
 
@@ -14,14 +14,16 @@ if TYPE_CHECKING:
 __all__ = ["RouteModel"]
 
 
-class RouteModel(BigIntAuditBase):
+class RouteModel(BigIntBase):
     __tablename__ = "route"  # type: ignore
 
     id: Mapped[str] = mapped_column(String(length=1000), primary_key=True)
-    agency_id: Mapped[str] = mapped_column(
-        String(length=1000), ForeignKey("agency.id", ondelete="CASCADE"), index=True
+    agency_id: Mapped[str] = mapped_column(String(length=1000), index=True)
+    agency: Mapped[AgencyModel] = relationship(
+        back_populates="routes",
+        primaryjoin=lambda: foreign(RouteModel.agency_id) == AgencyModel.id,
+        foreign_keys=[agency_id],
     )
-    agency: Mapped[AgencyModel] = relationship(back_populates="routes")
     short_name: Mapped[str] = mapped_column(String(length=1000), index=True)
     long_name: Mapped[str] = mapped_column(String(length=1000), index=True)
     description: Mapped[str | None] = mapped_column(String(length=1000))
@@ -29,6 +31,14 @@ class RouteModel(BigIntAuditBase):
     url: Mapped[str | None] = mapped_column(String(length=1000))
     color: Mapped[str | None] = mapped_column(String(length=1000))
     text_color: Mapped[str | None] = mapped_column(String(length=1000))
-    trips: Mapped[list[TripModel]] = relationship(back_populates="route")
+    trips: Mapped[list[TripModel]] = relationship(
+        back_populates="route",
+        primaryjoin=lambda: RouteModel.id == foreign(TripModel.route_id),
+        foreign_keys=lambda: [TripModel.route_id],
+    )
     rt_trips: Mapped[list[RTTripModel]] = relationship(back_populates="route")
     dataset: Mapped[str] = mapped_column(String(length=80), index=True)
+
+
+from SimplyTransport.domain.agency.model import AgencyModel as AgencyModel  # noqa: E402
+from SimplyTransport.domain.trip.model import TripModel as TripModel  # noqa: E402

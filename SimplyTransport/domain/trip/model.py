@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
-from advanced_alchemy.base import BigIntAuditBase
-from sqlalchemy import ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from advanced_alchemy.base import BigIntBase
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from ..enums import Direction
 
@@ -17,19 +17,27 @@ if TYPE_CHECKING:
 __all__ = ["Direction", "TripModel"]
 
 
-class TripModel(BigIntAuditBase):
+class TripModel(BigIntBase):
     __tablename__ = "trip"  # type: ignore
 
     id: Mapped[str] = mapped_column(String(length=1000), primary_key=True)
-    route: Mapped[RouteModel] = relationship(back_populates="trips")
-    route_id: Mapped[str] = mapped_column(
-        String(length=1000), ForeignKey("route.id", ondelete="CASCADE"), index=True
+    route_id: Mapped[str] = mapped_column(String(length=1000), index=True)
+    route: Mapped[RouteModel] = relationship(
+        back_populates="trips",
+        primaryjoin=lambda: foreign(TripModel.route_id) == RouteModel.id,
+        foreign_keys=[route_id],
     )
-    service_id: Mapped[str] = mapped_column(
-        String(length=1000), ForeignKey("calendar.id", ondelete="CASCADE"), index=True
+    service_id: Mapped[str] = mapped_column(String(length=1000), index=True)
+    service: Mapped[CalendarModel] = relationship(
+        back_populates="trips",
+        primaryjoin=lambda: foreign(TripModel.service_id) == CalendarModel.id,
+        foreign_keys=[service_id],
     )
-    service: Mapped[CalendarModel] = relationship(back_populates="trips")
-    stop_times: Mapped[list[StopTimeModel]] = relationship(back_populates="trip")
+    stop_times: Mapped[list[StopTimeModel]] = relationship(
+        back_populates="trip",
+        primaryjoin=lambda: TripModel.id == foreign(StopTimeModel.trip_id),
+        foreign_keys=lambda: [StopTimeModel.trip_id],
+    )
     headsign: Mapped[str | None] = mapped_column(String(length=1000))
     short_name: Mapped[str | None] = mapped_column(String(length=1000))
     direction: Mapped[Direction] = mapped_column(Integer)
@@ -39,3 +47,8 @@ class TripModel(BigIntAuditBase):
     rt_stop_times: Mapped[list[RTStopTimeModel]] = relationship(back_populates="trip")
     rt_vehicles: Mapped[list[RTVehicleModel]] = relationship(back_populates="trip")
     dataset: Mapped[str] = mapped_column(String(length=80), index=True)
+
+
+from SimplyTransport.domain.calendar.model import CalendarModel as CalendarModel  # noqa: E402
+from SimplyTransport.domain.route.model import RouteModel as RouteModel  # noqa: E402
+from SimplyTransport.domain.stop_times.model import StopTimeModel as StopTimeModel  # noqa: E402

@@ -1,11 +1,11 @@
-from advanced_alchemy.base import BigIntAuditBase, DefaultBase
+from advanced_alchemy.base import BigIntBase, DefaultBase
 from sqlalchemy import Float, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 __all__ = ["ShapeGeometryRow", "ShapeModel"]
 
 
-class ShapeModel(BigIntAuditBase):
+class ShapeModel(BigIntBase):
     __tablename__ = "shape"  # type: ignore
     __table_args__ = (Index("ix_shape_shape_id_sequence", "shape_id", "sequence"),)
     shape_id: Mapped[str] = mapped_column(String(length=1000))
@@ -17,7 +17,7 @@ class ShapeModel(BigIntAuditBase):
 
 
 class ShapeGeometryRow(DefaultBase):
-    """Polyline geometry read model: ``shape`` table without distance, dataset, or audit columns."""
+    """Polyline geometry read model: ``shape`` table without distance or dataset columns."""
 
     __allow_unmapped__ = True
     __table__ = ShapeModel.__table__
