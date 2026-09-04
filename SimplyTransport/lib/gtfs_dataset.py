@@ -52,6 +52,15 @@ async def import_gtfs_dataset(directory: str) -> None:
     total_time_taken = 0.0
     start = time.perf_counter()
 
+    with rp.Progress(
+        rp.SpinnerColumn(finished_text="✅"),
+        "[progress.description]{task.description}",
+        rp.TimeElapsedColumn(),
+    ) as progress:
+        task = progress.add_task("[red]Clearing realtime tables...", total=1)
+        await imp.clear_realtime_tables()
+        progress.update(task, advance=1)
+
     for file in FILES_TO_IMPORT:
         file_start = time.perf_counter()
         if not (os.path.exists(directory) and os.path.isfile(directory + file)):

@@ -24,7 +24,8 @@ from .db.services import create_secondary_indexes, drop_secondary_indexes
 NUMBER_OF_CONSUMERS = 2
 QUEUE_MAXSIZE = 2
 COPY_BATCH_SIZE = 50_000
-TRUNCATE_CASCADE_TABLES = frozenset({"trip", "route", "stop"})
+TRUNCATE_CASCADE_TABLES = frozenset({"stop"})
+REALTIME_TABLES_TO_CLEAR = ("rt_stop_time", "rt_trip", "rt_vehicle")
 
 TRIP_CSV_FIELDS = (
     "trip_id",
@@ -102,6 +103,14 @@ def choose_clear_strategy(*, other_dataset_exists: bool, table_name: str) -> Cle
     if table_name in TRUNCATE_CASCADE_TABLES:
         return ClearStrategy.TRUNCATE_CASCADE
     return ClearStrategy.TRUNCATE
+
+
+async def clear_realtime_tables() -> None:
+    """Wipe RT overlay tables before a static import (no FKs left to CASCADE from trip/route)."""
+    async with async_session_factory() as session:
+        for table_name in REALTIME_TABLES_TO_CLEAR:
+            await session.execute(text(f'TRUNCATE TABLE "{table_name}" RESTART IDENTITY'))
+        await session.commit()
 
 
 def optional_int(value: str) -> int | None:

@@ -35,9 +35,14 @@ class StopModel(BigIntBase):
         primaryjoin=lambda: StopModel.id == foreign(StopTimeModel.stop_id),
         foreign_keys=lambda: [StopTimeModel.stop_id],
     )
-    rt_stop_times: Mapped[list[RTStopTimeModel]] = relationship(back_populates="stop")
+    rt_stop_times: Mapped[list[RTStopTimeModel]] = relationship(
+        back_populates="stop",
+        primaryjoin=lambda: StopModel.id == foreign(RTStopTimeModel.stop_id),
+        foreign_keys=lambda: [RTStopTimeModel.stop_id],
+    )
     stop_feature: Mapped[StopFeatureModel] = relationship(back_populates="stop")
     dataset: Mapped[str] = mapped_column(String(length=80), index=True)
 
 
+from ..realtime.stop_time.model import RTStopTimeModel as RTStopTimeModel  # noqa: E402
 from ..stop_times.model import StopTimeModel as StopTimeModel  # noqa: E402
