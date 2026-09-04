@@ -221,8 +221,6 @@ class CLIPlugin(CLIPluginProtocol):
 
             console.print(f"\n{len(data['entity'])} entities returned from API")
 
-            await importer.clear_table_stop_trip()
-
             with rp.Progress(*progress_columns) as progress:
                 total_stop_times, total_trips = await asyncio_gather_imports(importer, data, progress)
 
@@ -298,7 +296,7 @@ class CLIPlugin(CLIPluginProtocol):
             total_stop_times, total_trips = await importer.import_from_payload(payload)
             console.print(
                 f"[green]Seeded realtime for dataset {realtime_dataset}: "
-                f"{total_trips} rt_trip row(s) upserted, {total_stop_times} rt_stop_time row(s) upserted."
+                f"{total_trips} rt_trip row(s) imported, {total_stop_times} rt_stop_time row(s) imported."
             )
 
             redis_service = await provide_redis_service()
@@ -367,7 +365,6 @@ class CLIPlugin(CLIPluginProtocol):
 
             console.print(f"\n{len(data['entity'])} entities returned from API")
 
-            await importer.clear_table_vehicles()
             console.print("\nImporting Vehicles")
             total_vehicles = await importer.import_vehicles(data)
 

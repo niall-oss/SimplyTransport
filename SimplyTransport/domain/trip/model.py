@@ -43,12 +43,27 @@ class TripModel(BigIntBase):
     direction: Mapped[Direction] = mapped_column(Integer)
     block_id: Mapped[str | None] = mapped_column(String(length=1000))
     shape_id: Mapped[str] = mapped_column(String(length=1000), index=True)
-    rt_trips: Mapped[list[RTTripModel]] = relationship(back_populates="trip")
-    rt_stop_times: Mapped[list[RTStopTimeModel]] = relationship(back_populates="trip")
-    rt_vehicles: Mapped[list[RTVehicleModel]] = relationship(back_populates="trip")
+    rt_trips: Mapped[list[RTTripModel]] = relationship(
+        back_populates="trip",
+        primaryjoin=lambda: TripModel.id == foreign(RTTripModel.trip_id),
+        foreign_keys=lambda: [RTTripModel.trip_id],
+    )
+    rt_stop_times: Mapped[list[RTStopTimeModel]] = relationship(
+        back_populates="trip",
+        primaryjoin=lambda: TripModel.id == foreign(RTStopTimeModel.trip_id),
+        foreign_keys=lambda: [RTStopTimeModel.trip_id],
+    )
+    rt_vehicles: Mapped[list[RTVehicleModel]] = relationship(
+        back_populates="trip",
+        primaryjoin=lambda: TripModel.id == foreign(RTVehicleModel.trip_id),
+        foreign_keys=lambda: [RTVehicleModel.trip_id],
+    )
     dataset: Mapped[str] = mapped_column(String(length=80), index=True)
 
 
 from SimplyTransport.domain.calendar.model import CalendarModel as CalendarModel  # noqa: E402
+from SimplyTransport.domain.realtime.stop_time.model import RTStopTimeModel as RTStopTimeModel  # noqa: E402
+from SimplyTransport.domain.realtime.trip.model import RTTripModel as RTTripModel  # noqa: E402
+from SimplyTransport.domain.realtime.vehicle.model import RTVehicleModel as RTVehicleModel  # noqa: E402
 from SimplyTransport.domain.route.model import RouteModel as RouteModel  # noqa: E402
 from SimplyTransport.domain.stop_times.model import StopTimeModel as StopTimeModel  # noqa: E402

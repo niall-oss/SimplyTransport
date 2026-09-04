@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from advanced_alchemy.base import BigIntAuditBase
+from advanced_alchemy.base import BigIntBase
+from advanced_alchemy.types.datetime import DateTimeUTC
 from pydantic import BaseModel as _BaseModel
-from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Index, Integer, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from ..enums import ScheduleRealtionship
 
@@ -18,7 +20,7 @@ class BaseModel(_BaseModel):
     model_config = {"from_attributes": True}
 
 
-class RTStopTimeModel(BigIntAuditBase):
+class RTStopTimeModel(BigIntBase):
     __tablename__ = "rt_stop_time"  # type: ignore
     __table_args__ = (
         Index("ix_rt_stop_time_dataset_created_at", "dataset", "created_at"),
@@ -27,21 +29,28 @@ class RTStopTimeModel(BigIntAuditBase):
         ),  # Only store the most recent update per stop_sequence for each trip
     )
 
-    stop: Mapped[StopModel] = relationship(back_populates="rt_stop_times")
-    stop_id: Mapped[str] = mapped_column(
-        String(length=1000), ForeignKey("stop.id", ondelete="CASCADE"), index=True
+    stop: Mapped[StopModel] = relationship(
+        back_populates="rt_stop_times",
+        primaryjoin=lambda: foreign(RTStopTimeModel.stop_id) == StopModel.id,
+        foreign_keys=lambda: [RTStopTimeModel.stop_id],
     )
-    trip: Mapped[TripModel] = relationship(back_populates="rt_stop_times")
-    trip_id: Mapped[str] = mapped_column(
-        String(length=1000), ForeignKey("trip.id", ondelete="CASCADE"), index=True
+    stop_id: Mapped[str] = mapped_column(String(length=1000), index=True)
+    trip: Mapped[TripModel] = relationship(
+        back_populates="rt_stop_times",
+        primaryjoin=lambda: foreign(RTStopTimeModel.trip_id) == TripModel.id,
+        foreign_keys=lambda: [RTStopTimeModel.trip_id],
     )
+    trip_id: Mapped[str] = mapped_column(String(length=1000), index=True)
     stop_sequence: Mapped[int] = mapped_column(Integer)
     schedule_relationship: Mapped[ScheduleRealtionship] = mapped_column(String(length=1000))
     arrival_delay: Mapped[int | None] = mapped_column(Integer)
     departure_delay: Mapped[int | None] = mapped_column(Integer)
-    entity_id: Mapped[str] = mapped_column(String(length=1000), index=True)
+    entity_id: Mapped[str] = mapped_column(String(length=1000))
     dataset: Mapped[str] = mapped_column(String(length=80))
-    # If you add a new field, remember to update the batch insert query in the realtime importer
+    created_at: Mapped[datetime] = mapped_column(
+        DateTimeUTC(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )
 
 
 class RTStopTime(BaseModel):
@@ -51,3 +60,7 @@ class RTStopTime(BaseModel):
     schedule_relationship: ScheduleRealtionship
     arrival_delay: int
     departure_delay: int
+
+
+from SimplyTransport.domain.stop.model import StopModel as StopModel  # noqa: E402
+from SimplyTransport.domain.trip.model import TripModel as TripModel  # noqa: E402

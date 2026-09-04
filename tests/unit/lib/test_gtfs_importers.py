@@ -25,9 +25,13 @@ from SimplyTransport.lib.gtfs_importers import (
         (False, "stop_time", ClearStrategy.TRUNCATE),
         (False, "shape", ClearStrategy.TRUNCATE),
         (False, "agency", ClearStrategy.TRUNCATE),
-        (False, "trip", ClearStrategy.TRUNCATE_CASCADE),
-        (False, "route", ClearStrategy.TRUNCATE_CASCADE),
+        (False, "trip", ClearStrategy.TRUNCATE),
+        (False, "route", ClearStrategy.TRUNCATE),
         (False, "stop", ClearStrategy.TRUNCATE_CASCADE),
+        (False, "rt_trip", ClearStrategy.TRUNCATE),
+        (False, "rt_stop_time", ClearStrategy.TRUNCATE),
+        (False, "rt_vehicle", ClearStrategy.TRUNCATE),
+        (True, "rt_trip", ClearStrategy.DELETE),
     ],
 )
 def test_choose_clear_strategy(other_dataset_exists, table_name, expected):

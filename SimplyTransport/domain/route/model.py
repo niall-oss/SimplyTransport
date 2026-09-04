@@ -36,9 +36,14 @@ class RouteModel(BigIntBase):
         primaryjoin=lambda: RouteModel.id == foreign(TripModel.route_id),
         foreign_keys=lambda: [TripModel.route_id],
     )
-    rt_trips: Mapped[list[RTTripModel]] = relationship(back_populates="route")
+    rt_trips: Mapped[list[RTTripModel]] = relationship(
+        back_populates="route",
+        primaryjoin=lambda: RouteModel.id == foreign(RTTripModel.route_id),
+        foreign_keys=lambda: [RTTripModel.route_id],
+    )
     dataset: Mapped[str] = mapped_column(String(length=80), index=True)
 
 
 from SimplyTransport.domain.agency.model import AgencyModel as AgencyModel  # noqa: E402
+from SimplyTransport.domain.realtime.trip.model import RTTripModel as RTTripModel  # noqa: E402
 from SimplyTransport.domain.trip.model import TripModel as TripModel  # noqa: E402

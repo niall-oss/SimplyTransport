@@ -1,3 +1,4 @@
+from datetime import UTC, date, datetime, time
 from json import JSONDecodeError
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -134,3 +135,54 @@ async def test_fetch_retries_invalid_json_then_succeeds():
     assert result == payload
     assert client.get.await_count == 2
     sleep.assert_awaited_once_with(rt.HTTP_RETRY_DELAY_SECONDS)
+
+
+def test_rt_trip_record_column_order():
+    created = datetime(2026, 9, 4, 1, 0, tzinfo=UTC)
+    assert rt.rt_trip_record(
+        "t1",
+        "r1",
+        time(8, 30),
+        date(2026, 9, 4),
+        "SCHEDULED",
+        1,
+        "entity-1",
+        "TFI",
+        created,
+    ) == ("t1", "r1", time(8, 30), date(2026, 9, 4), "SCHEDULED", 1, "entity-1", "TFI", created)
+
+
+def test_rt_stop_time_record_allows_null_delays():
+    created = datetime(2026, 9, 4, 1, 0, tzinfo=UTC)
+    assert rt.rt_stop_time_record(
+        "s1",
+        "t1",
+        3,
+        "SCHEDULED",
+        None,
+        12,
+        "entity-1",
+        "TFI",
+        created,
+    ) == ("s1", "t1", 3, "SCHEDULED", None, 12, "entity-1", "TFI", created)
+
+
+def test_rt_vehicle_record_column_order():
+    created = datetime(2026, 9, 4, 1, 0, tzinfo=UTC)
+    updated = datetime(2026, 9, 4, 0, 59)
+    assert rt.rt_vehicle_record(9, "t1", updated, 53.3, -6.2, "TFI", created) == (
+        9,
+        "t1",
+        updated,
+        53.3,
+        -6.2,
+        "TFI",
+        created,
+    )
+
+
+def test_dedup_records_by_key_keeps_last():
+    first = ("t1", "r1", "a")
+    second = ("t1", "r1", "b")
+    other = ("t2", "r1", "c")
+    assert rt.dedup_records_by_key([first, other, second], (0, 1)) == [second, other]
