@@ -81,42 +81,11 @@ Realtime data is updated every minute.
 
 [OpenAPI Yaml](https://simplytransport.ie/docs/openapi.yaml)
 
-- [x] Agencies
-- [x] Stops
-- [x] Routes
-- [x] Calendar
-- [x] CalendarDates
-- [x] StopTimes
-- [x] Trips
-- [x] Shapes
-- [x] Schedules
-- [x] Realtime
-- [x] Realtime Vehicles
-- [x] StopFeatures
-
-## Web Interface
-
-- [x] Homepage
-- [x] About
-- [x] Stop
-  - [x] Realtime
-  - [x] Schedule
-  - [x] Stop Features
-- [x] Route
-- [x] Trip
-- [x] Search Page
-  - [x] Stops
-  - [x] Routes
-- [x] Maps
 
 ### Maps
 
 Maps use **MapLibre GL JS** in the browser. The server exposes JSON under `/api/v1/map/...` (route polylines, stops, vehicles, etc.); the client fetches that data and draws layers on an OpenStreetMap raster basemap.
 
-- [x] Maps on route pages
-- [x] Maps on stop pages
-- [x] Aggregation of stops
-- [x] Aggregation of routes
 
 ## CLI Interface
 
@@ -125,15 +94,6 @@ Maps use **MapLibre GL JS** in the browser. The server exposes JSON under `/api/
 
 This extends the standard litestar cli. You can view all the commands by just running `litestar`.
 
-- [x] Application Settings `settings`
-- [x] Documentation Links `docs`
-- [x] GTFS Importer `importgtfs`
-- [x] Realtime Updater `importrealtime`
-- [x] Stop Feature Importer `importstopfeatures`
-- [x] Create Database tables manually `create_tables`
-- [x] Recreate all database indexes `recreate_indexes`
-- [x] Cleanup expired events from the database `cleanupevents`
-- [x] Flush the redis cache `flushcache`
 
 # Installation
 
