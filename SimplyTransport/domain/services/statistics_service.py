@@ -112,12 +112,15 @@ class StatisticsService:
             stat_for_totals = DatabaseStatisticWithPercentage(
                 key=total_row_key,
                 value=total_rows,
-                percentage=100,
+                percentage=100 if total_rows else 0,
             )
             stats_with_percentages.append(stat_for_totals)
 
         for stat in stats:
-            percentage = round((stat.value / total_rows) * 100, decimals_places_to_round)
+            if total_rows == 0:
+                percentage = 0.0
+            else:
+                percentage = round((stat.value / total_rows) * 100, decimals_places_to_round)
             percentage_stat = DatabaseStatisticWithPercentage(
                 key=stat.key,
                 value=stat.value,

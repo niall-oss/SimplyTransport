@@ -13,7 +13,6 @@ from ...lib.parameters.time_query import EndDateTimeQuery, ScheduledTimePath, St
 from ...lib.time_date_conversions import validate_time_range
 from ...timescale.ts_stop_times.ts_stop_time_repo import (
     MAXIMUM_LIMIT,
-    MAXIMUM_TIMESTAMP,
     TSStopTimeRepo,
     provide_ts_stop_time_repo,
 )
@@ -34,7 +33,7 @@ class DelaysController(Controller):
             "scheduled_time",
         ),
         summary="Get aggregated delay data for a route on a stop on a time",
-        description=f"All queries will be limited to {MAXIMUM_TIMESTAMP.strftime('%Y-%m-%d')} onwards",
+        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days",
         raises=[NotFoundException, ValidationException],
     )
     async def get_aggregated_delay_on_stop_on_route_on_time(
@@ -65,8 +64,8 @@ class DelaysController(Controller):
             "scheduled_time",
         ),
         summary="Get delay data for a route on a stop on a time",
-        description=f"All queries will be limited to {MAXIMUM_TIMESTAMP.strftime('%Y-%m-%d')} "
-        f"onwards or {MAXIMUM_LIMIT} records",
+        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days "
+        f"or {MAXIMUM_LIMIT} records",
         raises=[ValidationException],
     )
     async def get_delay_on_stop_on_route_on_time(
@@ -99,8 +98,8 @@ class DelaysController(Controller):
             "scheduled_time",
         ),
         summary="Get truncated delay data for a route on a stop on a time",
-        description=f"All queries will be limited to {MAXIMUM_TIMESTAMP.strftime('%Y-%m-%d')} "
-        f"onwards or {MAXIMUM_LIMIT} records",
+        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days "
+        f"or {MAXIMUM_LIMIT} records",
         raises=[ValidationException],
     )
     async def get_truncated_delay_on_stop_on_route_on_time(
@@ -127,7 +126,7 @@ class DelaysController(Controller):
             "route_code",
         ),
         summary="Get aggregated delay data for a route",
-        description=f"All queries will be limited to {MAXIMUM_TIMESTAMP.strftime('%Y-%m-%d')} onwards",
+        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days",
         raises=[NotFoundException, ValidationException],
     )
     async def get_aggregated_delay_on_route(

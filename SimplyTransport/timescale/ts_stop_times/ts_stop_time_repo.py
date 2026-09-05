@@ -16,7 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .ts_stop_time_model import TSStopTimeModel
 
 MAXIMUM_LIMIT = 180
-MAXIMUM_TIMESTAMP = datetime.now() - timedelta(days=MAXIMUM_LIMIT)
+DELETE_OLD_DELAYS_BATCH_SIZE = 10000
+
+
+def maximum_timestamp() -> datetime:
+    """Cutoff for delay queries: now minus ``MAXIMUM_LIMIT`` days (evaluated per call)."""
+    return datetime.now() - timedelta(days=MAXIMUM_LIMIT)
 
 
 class TSStopTimeRepo(SQLAlchemyAsyncRepository[TSStopTimeModel]):  # type: ignore
@@ -71,7 +76,7 @@ class TSStopTimeRepo(SQLAlchemyAsyncRepository[TSStopTimeModel]):  # type: ignor
 
         params = {
             "route_code": route_code,
-            "max_timestamp": MAXIMUM_TIMESTAMP,
+            "max_timestamp": maximum_timestamp(),
         }
 
         if start_time:
@@ -134,7 +139,7 @@ class TSStopTimeRepo(SQLAlchemyAsyncRepository[TSStopTimeModel]):  # type: ignor
                 TSStopTimeModel.route_code == route_code,
                 TSStopTimeModel.stop_id == stop_id,
                 TSStopTimeModel.scheduled_time == scheduled_time,
-                TSStopTimeModel.Timestamp > MAXIMUM_TIMESTAMP,
+                TSStopTimeModel.Timestamp > maximum_timestamp(),
             )
             .order_by(TSStopTimeModel.Timestamp.desc())
             .limit(MAXIMUM_LIMIT)
@@ -183,7 +188,7 @@ class TSStopTimeRepo(SQLAlchemyAsyncRepository[TSStopTimeModel]):  # type: ignor
                 TSStopTimeModel.route_code == route_code,
                 TSStopTimeModel.stop_id == stop_id,
                 TSStopTimeModel.scheduled_time == scheduled_time,
-                TSStopTimeModel.Timestamp > MAXIMUM_TIMESTAMP,
+                TSStopTimeModel.Timestamp > maximum_timestamp(),
             )
             .order_by(TSStopTimeModel.Timestamp.desc())
             .limit(MAXIMUM_LIMIT)
@@ -197,28 +202,33 @@ class TSStopTimeRepo(SQLAlchemyAsyncRepository[TSStopTimeModel]):  # type: ignor
 
         return [TSStopTimeForGraph(timestamp=row[0], delay_in_seconds=row[1]) for row in rows]
 
-    async def delete_old_delays(self, cutoff_time: datetime) -> int:
+    async def delete_old_delays(
+        self, cutoff_time: datetime, *, batch_size: int = DELETE_OLD_DELAYS_BATCH_SIZE
+    ) -> int:
         """
         Deletes old delays from the database in batches.
         Args:
             cutoff_time (datetime): The cutoff time for deleting delays.
+            batch_size (int): Max rows to delete per statement.
         Returns:
             int: The number of delays deleted.
         """
 
-        # Delete in batches of 10000
-        batch_size = 10000
         total_deleted = 0
 
         while True:
-            statement = delete(TSStopTimeModel).where(TSStopTimeModel.Timestamp < cutoff_time)
+            id_batch = (
+                select(TSStopTimeModel.id).where(TSStopTimeModel.Timestamp < cutoff_time).limit(batch_size)
+            )
+            statement = delete(TSStopTimeModel).where(TSStopTimeModel.id.in_(id_batch))
             result = cast(
                 CursorResult[Any],
                 await self.session.execute(statement),
             )
             await self.session.commit()
-            total_deleted += result.rowcount
-            if result.rowcount < batch_size:
+            deleted = result.rowcount or 0
+            total_deleted += deleted
+            if deleted < batch_size:
                 break
         return total_deleted
 

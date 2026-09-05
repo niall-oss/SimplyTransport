@@ -274,3 +274,72 @@ async def test_get_realtime_schedules_non_exact_skipped_predecessor_not_shown_as
     assert len(out) == 1
     assert out[0].delay_in_seconds == 300
     assert out[0].on_time_status is not OnTimeStatus.SKIPPED
+
+
+@pytest.mark.asyncio
+async def test_get_realtime_schedules_empty_input_short_circuits():
+    repo = AsyncMock()
+    svc = RealtimeService(
+        rt_stop_repo=AsyncMock(),
+        rt_trip_repo=AsyncMock(),
+        rt_vehicle_repo=AsyncMock(),
+        realtime_schedule_repo=repo,
+    )
+    assert await svc.get_realtime_schedules_for_static_schedules([]) == []
+    repo.load_recent_rt_overlay_for_schedules.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_realtime_schedules_trip_only_without_stop_overlay():
+    static = StaticScheduleModel(
+        stop_time=StopTimeModel(arrival_time=time.fromisoformat("12:00:00"), stop_sequence=1),
+        route=AsyncMock(short_name="4"),
+        calendar=AsyncMock(),
+        stop=AsyncMock(id="S1"),
+        trip=AsyncMock(id="T1", dataset="TFI"),
+        is_added_exception=False,
+    )
+    rt_trip = SimpleNamespace(
+        trip_id="T1",
+        route_id="R1",
+        schedule_relationship=ScheduleRelationship.SCHEDULED,
+    )
+    repo = AsyncMock()
+    repo.load_recent_rt_overlay_for_schedules = AsyncMock(return_value=({"T1": rt_trip}, {}))
+    svc = RealtimeService(
+        rt_stop_repo=AsyncMock(),
+        rt_trip_repo=AsyncMock(),
+        rt_vehicle_repo=AsyncMock(),
+        realtime_schedule_repo=repo,
+    )
+    out = await svc.get_realtime_schedules_for_static_schedules([static])
+    assert len(out) == 1
+    assert out[0].rt_trip is rt_trip
+    assert out[0].rt_stop_time is None
+    assert out[0].on_time_status is OnTimeStatus.UNKNOWN
+
+
+def test_filter_to_only_due_schedules():
+    svc = RealtimeService(
+        rt_stop_repo=AsyncMock(),
+        rt_trip_repo=AsyncMock(),
+        rt_vehicle_repo=AsyncMock(),
+        realtime_schedule_repo=AsyncMock(),
+    )
+    due = SimpleNamespace(is_due=True)
+    not_due = SimpleNamespace(is_due=False)
+    assert svc.filter_to_only_due_schedules(cast(list[RealtimeScheduleModel], [due, not_due])) == [due]
+
+
+def test_filter_to_only_schedules_with_updates_drops_unknown():
+    svc = RealtimeService(
+        rt_stop_repo=AsyncMock(),
+        rt_trip_repo=AsyncMock(),
+        rt_vehicle_repo=AsyncMock(),
+        realtime_schedule_repo=AsyncMock(),
+    )
+    known = SimpleNamespace(on_time_status=OnTimeStatus.LATE)
+    unknown = SimpleNamespace(on_time_status=OnTimeStatus.UNKNOWN)
+    assert svc.filter_to_only_schedules_with_updates(cast(list[RealtimeScheduleModel], [known, unknown])) == [
+        known
+    ]
