@@ -8,15 +8,15 @@ from typing import Any, ClassVar
 import rich.progress as rp
 from sqlalchemy import delete, select, text
 
-from ..domain.agency.model import AgencyModel
-from ..domain.calendar.model import CalendarModel
-from ..domain.calendar_dates.model import CalendarDateModel
+from ..domain.agency.agency_model import AgencyModel
+from ..domain.calendar.calendar_model import CalendarModel
+from ..domain.calendar_dates.calendar_date_model import CalendarDateModel
 from ..domain.enums import RouteType
-from ..domain.route.model import RouteModel
-from ..domain.shape.model import ShapeModel
-from ..domain.stop.model import StopModel
-from ..domain.stop_times.model import StopTimeModel
-from ..domain.trip.model import TripModel
+from ..domain.route.route_model import RouteModel
+from ..domain.shape.shape_model import ShapeModel
+from ..domain.stop.stop_model import StopModel
+from ..domain.stop_times.stop_time_model import StopTimeModel
+from ..domain.trip.trip_model import TripModel
 from . import time_date_conversions as tdc
 from .db.database import async_session_factory, get_async_engine
 from .db.services import create_secondary_indexes, drop_secondary_indexes

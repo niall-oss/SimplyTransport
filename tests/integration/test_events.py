@@ -1,6 +1,6 @@
 import pytest
 from litestar.testing import AsyncTestClient
-from SimplyTransport.controllers.events import ALL_EVENTS
+from SimplyTransport.controllers.events_controller import ALL_EVENTS
 from SimplyTransport.domain.events.event_types import EventType
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

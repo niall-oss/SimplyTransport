@@ -1,6 +1,6 @@
 from datetime import date
 
-from SimplyTransport.domain.calendar.model import CalendarModel
+from SimplyTransport.domain.calendar.calendar_model import CalendarModel
 
 
 def _all_days_calendar(**overrides: object) -> CalendarModel:

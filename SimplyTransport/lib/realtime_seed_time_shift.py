@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
-from SimplyTransport.domain.stop_times.model import StopTimeModel
+from SimplyTransport.domain.stop_times.stop_time_model import StopTimeModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..domain.calendar.model import CalendarModel
-from ..domain.calendar_dates.model import CalendarDateModel
+from ..domain.calendar.calendar_model import CalendarModel
+from ..domain.calendar_dates.calendar_date_model import CalendarDateModel
 from ..domain.enums import DayOfWeek, ExceptionType
-from ..domain.trip.model import TripModel
+from ..domain.trip.trip_model import TripModel
 from .gtfs_realtime_importers import _effective_trip_id_for_trip_update
 from .logging.logging import provide_logger
 

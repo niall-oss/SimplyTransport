@@ -5,8 +5,8 @@ from pathlib import Path
 import rich.progress as rp
 import SimplyTransport.lib.gtfs_importers as imp
 from rich.console import Console
+from SimplyTransport.domain.events.event_repo import create_event_with_session
 from SimplyTransport.domain.events.event_types import EventType
-from SimplyTransport.domain.events.repo import create_event_with_session
 from SimplyTransport.domain.services.statistics_service import provide_statistics_service
 from SimplyTransport.lib.cache import provide_redis_service
 from SimplyTransport.lib.cache_keys import CacheKeys

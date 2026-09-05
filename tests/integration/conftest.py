@@ -96,27 +96,27 @@ def _wait_for_stack() -> None:
 
 async def _seed_delay_rows() -> None:
     from SimplyTransport.lib.db.timescale_database import async_timescale_session_factory
-    from SimplyTransport.timescale.ts_stop_times.model import TS_StopTimeModel
+    from SimplyTransport.timescale.ts_stop_times.ts_stop_time_model import TSStopTimeModel
 
     now = datetime.now()
     async with async_timescale_session_factory() as session:
         session.add_all(
             [
-                TS_StopTimeModel(
+                TSStopTimeModel(
                     Timestamp=now - timedelta(days=1),
                     stop_id="8240DB000324",
                     route_code="4",
                     scheduled_time=time(8, 0, 0),
                     delay_in_seconds=120,
                 ),
-                TS_StopTimeModel(
+                TSStopTimeModel(
                     Timestamp=now - timedelta(days=2),
                     stop_id="8240DB000324",
                     route_code="4",
                     scheduled_time=time(8, 0, 0),
                     delay_in_seconds=60,
                 ),
-                TS_StopTimeModel(
+                TSStopTimeModel(
                     Timestamp=now - timedelta(days=3),
                     stop_id="8240DB000324",
                     route_code="4",

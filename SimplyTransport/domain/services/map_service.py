@@ -4,7 +4,7 @@ from typing import Literal
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar.di import NamedDependency
-from SimplyTransport.api_contract.map_payloads import (
+from SimplyTransport.api_contracts.map_contracts import (
     AgencyRoutesMapPayload,
     GeoJSONLineString,
     NearbyMapPayload,
@@ -16,20 +16,20 @@ from SimplyTransport.api_contract.map_payloads import (
     VehiclePoint,
 )
 from SimplyTransport.domain.maps.colors import Colors
-from SimplyTransport.domain.realtime.vehicle.model import RTVehicleModel
-from SimplyTransport.domain.shape.model import ShapeGeometryRow
+from SimplyTransport.domain.realtime.vehicle.rt_vehicle_model import RTVehicleModel
+from SimplyTransport.domain.shape.shape_model import ShapeGeometryRow
 from SimplyTransport.lib.cache import RedisService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...lib.logging.logging import provide_logger
 from ...lib.tracing import CreateSpan
 from ..maps.enums import StaticStopMapTypes
-from ..realtime.vehicle.repo import RTVehicleRepository
-from ..route.repo import RouteRepository
-from ..shape.repo import ShapeRepository
-from ..stop.model import StopModel
-from ..stop.repo import StopRepository
-from ..trip.repo import TripRepository
+from ..realtime.vehicle.rt_vehicle_repo import RTVehicleRepo
+from ..route.route_repo import RouteRepo
+from ..shape.shape_repo import ShapeRepo
+from ..stop.stop_model import StopModel
+from ..stop.stop_repo import StopRepo
+from ..trip.trip_repo import TripRepo
 
 logger = provide_logger(__name__)
 
@@ -57,39 +57,39 @@ def _vehicle_point_from_rt(
 class MapService:
     def __init__(
         self,
-        stop_repository: StopRepository,
-        route_repository: RouteRepository,
-        shape_repository: ShapeRepository,
-        trip_repository: TripRepository,
-        rt_vehicle_repository: RTVehicleRepository,
+        stop_repo: StopRepo,
+        route_repo: RouteRepo,
+        shape_repo: ShapeRepo,
+        trip_repo: TripRepo,
+        rt_vehicle_repo: RTVehicleRepo,
     ):
-        self.stop_repository = stop_repository
-        self.route_repository = route_repository
-        self.shape_repository = shape_repository
-        self.trip_repository = trip_repository
-        self.rt_vehicle_repository = rt_vehicle_repository
+        self.stop_repo = stop_repo
+        self.route_repo = route_repo
+        self.shape_repo = shape_repo
+        self.trip_repo = trip_repo
+        self.rt_vehicle_repo = rt_vehicle_repo
 
     @CreateSpan()
     async def build_stop_map_payload(self, stop_id: str) -> StopMapPayload | None:
         """Build JSON for the realtime stop map (MapLibre client)."""
-        stop = await self.stop_repository.get(stop_id)
-        direction = await self.stop_repository.get_direction_of_stop(stop_id)
-        routes = await self.route_repository.get_routes_by_stop_id_with_agency(stop_id)
+        stop = await self.stop_repo.get(stop_id)
+        direction = await self.stop_repo.get_direction_of_stop(stop_id)
+        routes = await self.route_repo.get_routes_by_stop_id_with_agency(stop_id)
 
         if stop.lat is None or stop.lon is None:
             return None
 
         route_ids = [route.id for route in routes]
-        trips = await self.trip_repository.get_first_trips_by_route_ids(route_ids, direction)
+        trips = await self.trip_repo.get_first_trips_by_route_ids(route_ids, direction)
         trip_by_route_id = {t.route_id: t for t in trips}
 
-        vehicles_on_routes = await self.rt_vehicle_repository.get_vehicles_on_routes(route_ids, direction)
+        vehicles_on_routes = await self.rt_vehicle_repo.get_vehicles_on_routes(route_ids, direction)
         vehicles_dict: dict[str, list[RTVehicleModel]] = defaultdict(list)
         for vehicle in vehicles_on_routes:
             vehicles_dict[vehicle.trip.route_id].append(vehicle)
 
         shape_ids = list(dict.fromkeys(trip.shape_id for trip in trips))
-        shapes = await self.shape_repository.get_sequence_sorted_shapes_by_shape_ids(shape_ids)
+        shapes = await self.shape_repo.get_sequence_sorted_shapes_by_shape_ids(shape_ids)
         shapes_dict: dict[str, list[ShapeGeometryRow]] = defaultdict(list)
         for shape in shapes:
             shapes_dict[shape.shape_id].append(shape)
@@ -128,7 +128,7 @@ class MapService:
             for v in vehs:
                 vehicles_payload.append(_vehicle_point_from_rt(v, route_id, v_color))
 
-        other_stops_on_routes = await self.stop_repository.get_stops_by_route_ids(route_ids, direction)
+        other_stops_on_routes = await self.stop_repo.get_stops_by_route_ids(route_ids, direction)
 
         stops_out: list[StopMapStop] = [
             StopMapStop(
@@ -172,11 +172,11 @@ class MapService:
     @CreateSpan()
     async def build_route_map_payload(self, route_id: str, direction: int) -> RouteMapPayload:
         """Build JSON for the realtime single-route map (MapLibre client)."""
-        route = await self.route_repository.get_by_id_with_agency(route_id)
-        trip = await self.trip_repository.get_first_trip_by_route_id(route_id, direction)
+        route = await self.route_repo.get_by_id_with_agency(route_id)
+        trip = await self.trip_repo.get_first_trip_by_route_id(route_id, direction)
         if trip is None:
             raise NotFoundError(f"No trip found for route {route_id} and direction {direction}")
-        shapes = await self.shape_repository.get_sequence_sorted_shapes_by_shape_id(trip.shape_id)
+        shapes = await self.shape_repo.get_sequence_sorted_shapes_by_shape_id(trip.shape_id)
         if len(shapes) == 0:
             raise NotFoundError(f"No shapes found for route {route_id} and direction {direction}")
 
@@ -192,12 +192,12 @@ class MapService:
             line=GeoJSONLineString(coordinates=coordinates),
         )
 
-        vehicles_on_route = await self.rt_vehicle_repository.get_vehicles_on_routes([route_id], direction)
+        vehicles_on_route = await self.rt_vehicle_repo.get_vehicles_on_routes([route_id], direction)
         vehicles_payload: list[VehiclePoint] = [
             _vehicle_point_from_rt(v, route_id, color_hex) for v in vehicles_on_route
         ]
 
-        route_stops = await self.stop_repository.get_stops_by_route_id(route_id, direction)
+        route_stops = await self.stop_repo.get_stops_by_route_id(route_id, direction)
 
         stops_out: list[StopMapStop] = []
         for s in route_stops:
@@ -270,7 +270,7 @@ class MapService:
         Stops within ``radius_meters`` of the user point for MapLibre / JSON clients.
         """
         rm = float(radius_meters)
-        stops = await self.stop_repository.get_stops_near_location(latitude, longitude, int(radius_meters))
+        stops = await self.stop_repo.get_stops_near_location(latitude, longitude, int(radius_meters))
 
         stops_out: list[StopMapStop] = []
         for stop in stops:
@@ -292,18 +292,18 @@ class MapService:
         self, agency_id: str | Literal["All"]
     ) -> AgencyRoutesMapPayload:
         if agency_id == "All":
-            routes = await self.route_repository.get_with_agencies()
+            routes = await self.route_repo.get_with_agencies()
         else:
-            routes = await self.route_repository.get_with_agencies_by_agency_id(agency_id)
+            routes = await self.route_repo.get_with_agencies_by_agency_id(agency_id)
         if len(routes) == 0:
             raise ValueError(f"No routes found for agency {agency_id}")
         route_ids = [route.id for route in routes]
 
-        trips = await self.trip_repository.get_first_trips_by_route_ids(route_ids)
+        trips = await self.trip_repo.get_first_trips_by_route_ids(route_ids)
         trip_by_route_id = {t.route_id: t for t in trips}
 
         shape_ids = list(dict.fromkeys(trip.shape_id for trip in trips))
-        shapes = await self.shape_repository.get_sequence_sorted_shapes_by_shape_ids(shape_ids)
+        shapes = await self.shape_repo.get_sequence_sorted_shapes_by_shape_ids(shape_ids)
         shapes_dict: dict[str, list[ShapeGeometryRow]] = defaultdict(list)
         for shape in shapes:
             shapes_dict[shape.shape_id].append(shape)
@@ -345,13 +345,13 @@ class MapService:
     async def _get_stops_for_static_map_type(self, map_type: StaticStopMapTypes) -> list[StopModel]:
         match map_type:
             case StaticStopMapTypes.ALL_STOPS:
-                return await self.stop_repository.get_all_with_stop_feature()
+                return await self.stop_repo.get_all_with_stop_feature()
             case StaticStopMapTypes.REALTIME_DISPLAYS:
-                return await self.stop_repository.get_stops_with_realtime_displays()
+                return await self.stop_repo.get_stops_with_realtime_displays()
             case StaticStopMapTypes.SHELTERED_STOPS:
-                return await self.stop_repository.get_stops_with_shelters()
+                return await self.stop_repo.get_stops_with_shelters()
             case StaticStopMapTypes.UNSURVEYED:
-                return await self.stop_repository.get_stops_that_are_unsurveyed()
+                return await self.stop_repo.get_stops_that_are_unsurveyed()
             case _:
                 logger.error(f"Invalid map type {map_type}")
                 return []
@@ -388,9 +388,9 @@ async def provide_map_service(
         MapService: An instance of the MapService class.
     """
     return MapService(
-        StopRepository(session=db_session),
-        RouteRepository(session=db_session, cache=redis_service),
-        ShapeRepository(session=db_session),
-        TripRepository(session=db_session),
-        RTVehicleRepository(session=db_session),
+        StopRepo(session=db_session),
+        RouteRepo(session=db_session, cache=redis_service),
+        ShapeRepo(session=db_session),
+        TripRepo(session=db_session),
+        RTVehicleRepo(session=db_session),
     )

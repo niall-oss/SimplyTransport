@@ -4,31 +4,31 @@ from litestar.di import NamedDependency
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..realtime.enums import REMOVED_TRIP_RELATIONSHIPS, OnTimeStatus
-from ..realtime.realtime_schedule.model import RealTimeScheduleModel
-from ..realtime.realtime_schedule.repo import RealtimeScheduleRepository
-from ..realtime.stop_time.repo import RTStopTimeRepository
-from ..realtime.trip.repo import RTTripRepository
-from ..realtime.vehicle.repo import RTVehicleRepository
-from ..schedule.model import StaticScheduleModel
+from ..realtime.realtime_schedule.realtime_schedule_model import RealtimeScheduleModel
+from ..realtime.realtime_schedule.realtime_schedule_repo import RealtimeScheduleRepo
+from ..realtime.stop_time.rt_stop_time_repo import RTStopTimeRepo
+from ..realtime.trip.rt_trip_repo import RTTripRepo
+from ..realtime.vehicle.rt_vehicle_repo import RTVehicleRepo
+from ..schedule.static_schedule_model import StaticScheduleModel
 
 
-class RealTimeService:
+class RealtimeService:
     def __init__(
         self,
-        rt_stop_repository: RTStopTimeRepository,
-        rt_trip_repository: RTTripRepository,
-        rt_vehicle_repository: RTVehicleRepository,
-        realtime_schedule_repository: RealtimeScheduleRepository,
+        rt_stop_repo: RTStopTimeRepo,
+        rt_trip_repo: RTTripRepo,
+        rt_vehicle_repo: RTVehicleRepo,
+        realtime_schedule_repo: RealtimeScheduleRepo,
     ):
-        self.rt_stop_repository = rt_stop_repository
-        self.rt_trip_repository = rt_trip_repository
-        self.rt_vehicle_repository = rt_vehicle_repository
-        self.realtime_schedule_repository = realtime_schedule_repository
+        self.rt_stop_repo = rt_stop_repo
+        self.rt_trip_repo = rt_trip_repo
+        self.rt_vehicle_repo = rt_vehicle_repo
+        self.realtime_schedule_repo = realtime_schedule_repo
 
     async def get_realtime_schedules_for_static_schedules(
         self, schedules: Sequence[StaticScheduleModel]
-    ) -> list[RealTimeScheduleModel]:
-        """Returns a list of RealTimeSchedule objects for the given list of StaticSchedule objects"""
+    ) -> list[RealtimeScheduleModel]:
+        """Returns a list of RealtimeSchedule objects for the given list of StaticSchedule objects"""
 
         if not schedules:
             return []
@@ -36,9 +36,9 @@ class RealTimeService:
         (
             overlay_trips,
             overlay_stop_times,
-        ) = await self.realtime_schedule_repository.load_recent_rt_overlay_for_schedules(schedules)
+        ) = await self.realtime_schedule_repo.load_recent_rt_overlay_for_schedules(schedules)
 
-        realtime_schedules: list[RealTimeScheduleModel] = []
+        realtime_schedules: list[RealtimeScheduleModel] = []
         for static in schedules:
             trip_id = static.trip.id
             rt_trip = overlay_trips.get(trip_id)
@@ -49,11 +49,11 @@ class RealTimeService:
 
             if rt_trip is not None and rt_trip.schedule_relationship in REMOVED_TRIP_RELATIONSHIPS:
                 realtime_schedules.append(
-                    RealTimeScheduleModel(static_schedule=static, rt_trip=rt_trip, rt_stop_time=None)
+                    RealtimeScheduleModel(static_schedule=static, rt_trip=rt_trip, rt_stop_time=None)
                 )
             elif rt_stop_time is not None:
                 realtime_schedules.append(
-                    RealTimeScheduleModel(
+                    RealtimeScheduleModel(
                         static_schedule=static,
                         rt_stop_time=rt_stop_time,
                         rt_trip=rt_trip,
@@ -62,19 +62,19 @@ class RealTimeService:
                 )
             elif rt_trip is not None:
                 realtime_schedules.append(
-                    RealTimeScheduleModel(static_schedule=static, rt_trip=rt_trip, rt_stop_time=None)
+                    RealtimeScheduleModel(static_schedule=static, rt_trip=rt_trip, rt_stop_time=None)
                 )
             else:
-                realtime_schedules.append(RealTimeScheduleModel(static_schedule=static))
+                realtime_schedules.append(RealtimeScheduleModel(static_schedule=static))
 
         return realtime_schedules
 
     async def apply_custom_23_00_sorting(
-        self, realtime_schedules: list[RealTimeScheduleModel]
-    ) -> list[RealTimeScheduleModel]:
+        self, realtime_schedules: list[RealtimeScheduleModel]
+    ) -> list[RealtimeScheduleModel]:
         """Sorts the realtime schedules by realtime arrival time"""
 
-        def custom_sort_key(realtime_schedule: RealTimeScheduleModel):
+        def custom_sort_key(realtime_schedule: RealtimeScheduleModel):
             arrival_time = realtime_schedule.real_arrival_time
 
             # Handle the exception case where times in the range 00:00 to 02:00
@@ -89,16 +89,16 @@ class RealTimeService:
         return sorted_schedules
 
     def filter_to_only_due_schedules(
-        self, realtime_schedules: list[RealTimeScheduleModel]
-    ) -> list[RealTimeScheduleModel]:
+        self, realtime_schedules: list[RealtimeScheduleModel]
+    ) -> list[RealtimeScheduleModel]:
         """Filters the realtime schedules to only those that are due"""
 
         due_schedules = [schedule for schedule in realtime_schedules if schedule.is_due]
         return due_schedules
 
     def filter_to_only_schedules_with_updates(
-        self, realtime_schedules: list[RealTimeScheduleModel]
-    ) -> list[RealTimeScheduleModel]:
+        self, realtime_schedules: list[RealtimeScheduleModel]
+    ) -> list[RealtimeScheduleModel]:
         """Filters the realtime schedules to only those that have realtime updates"""
 
         realtime_schedules = [
@@ -109,15 +109,15 @@ class RealTimeService:
     async def get_distinct_realtime_trips(self) -> list[str]:
         """Returns all distinct trips."""
 
-        return await self.realtime_schedule_repository.get_distinct_realtime_trips()
+        return await self.realtime_schedule_repo.get_distinct_realtime_trips()
 
 
-async def provide_realtime_service(db_session: NamedDependency[AsyncSession]) -> RealTimeService:
+async def provide_realtime_service(db_session: NamedDependency[AsyncSession]) -> RealtimeService:
     """Constructs repository and service objects for the realtime service."""
 
-    return RealTimeService(
-        rt_stop_repository=RTStopTimeRepository(session=db_session),
-        rt_trip_repository=RTTripRepository(session=db_session),
-        rt_vehicle_repository=RTVehicleRepository(session=db_session),
-        realtime_schedule_repository=RealtimeScheduleRepository(session=db_session),
+    return RealtimeService(
+        rt_stop_repo=RTStopTimeRepo(session=db_session),
+        rt_trip_repo=RTTripRepo(session=db_session),
+        rt_vehicle_repo=RTVehicleRepo(session=db_session),
+        realtime_schedule_repo=RealtimeScheduleRepo(session=db_session),
     )

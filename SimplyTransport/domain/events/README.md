@@ -3,9 +3,9 @@
 ## Create a new event
 
 ```python
-from SimplyTransport.domain.events.repo import EventRepository, provide_event_repo
+from SimplyTransport.domain.events.event_repo import EventRepo, provide_event_repo
 
-event_repo: EventRepository = provide_event_repo()
+event_repo: EventRepo = provide_event_repo()
 
 await event_repo.create_event(event_type=EventType.Test, description="Test", attributes={"test": "test"})
 ```

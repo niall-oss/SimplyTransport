@@ -3,21 +3,21 @@ from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 
 import rich.progress as rp
-from SimplyTransport.domain.realtime.realtime_schedule.model import RealTimeScheduleModel
-from SimplyTransport.domain.schedule.model import StaticScheduleModel
-from SimplyTransport.domain.services.realtime_service import RealTimeService, provide_realtime_service
+from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_model import RealtimeScheduleModel
+from SimplyTransport.domain.schedule.static_schedule_model import StaticScheduleModel
+from SimplyTransport.domain.services.realtime_service import RealtimeService, provide_realtime_service
 from SimplyTransport.lib.cache import RedisService
 from SimplyTransport.lib.cache_keys import CacheKeys
 from SimplyTransport.lib.constants import CLEANUP_DELAYS_AFTER_DAYS
 from SimplyTransport.lib.extensions.chunking import chunk_list
 from SimplyTransport.lib.logging.logging import provide_logger
 from SimplyTransport.lib.tracing import CreateSpan
-from SimplyTransport.timescale.ts_stop_times.model import TS_StopTimeModel
+from SimplyTransport.timescale.ts_stop_times.ts_stop_time_model import TSStopTimeModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domain.enums import DayOfWeek
 from ...domain.services.schedule_service import ScheduleService, provide_schedule_service
-from ..ts_stop_times.repo import TSStopTimeRepository
+from ..ts_stop_times.ts_stop_time_repo import TSStopTimeRepo
 
 logger = provide_logger(__name__)
 
@@ -38,12 +38,12 @@ progress_columns = (
 class DelaysService:
     def __init__(
         self,
-        ts_stop_time_repository: TSStopTimeRepository,
+        ts_stop_time_repo: TSStopTimeRepo,
         schedule_service: ScheduleService,
-        realtime_service: RealTimeService,
+        realtime_service: RealtimeService,
         redis_cache: RedisService,
     ):
-        self.ts_stop_time_repository = ts_stop_time_repository
+        self.ts_stop_time_repo = ts_stop_time_repo
         self.schedule_service = schedule_service
         self.realtime_service = realtime_service
         self.redis_cache = redis_cache
@@ -85,7 +85,7 @@ class DelaysService:
 
         async def gather_realtime_schedules(
             schedules: Sequence[StaticScheduleModel],
-        ) -> list[RealTimeScheduleModel]:
+        ) -> list[RealtimeScheduleModel]:
             semaphore = asyncio.Semaphore(4)
 
             async def limited_task(task):
@@ -104,7 +104,7 @@ class DelaysService:
                 progress_task = progress.add_task(
                     "[green]Populating realtime schedules...", total=len(schedules)
                 )
-                results: list[RealTimeScheduleModel] = []
+                results: list[RealtimeScheduleModel] = []
                 for task in asyncio.as_completed(tasks):
                     result = await task
                     results.extend(result)
@@ -129,7 +129,7 @@ class DelaysService:
             if key_exists:
                 continue
 
-            ts_stop_time = TS_StopTimeModel(
+            ts_stop_time = TSStopTimeModel(
                 stop_id=schedule.static_schedule.stop.id,
                 route_code=schedule.static_schedule.route.short_name,
                 scheduled_time=schedule.static_schedule.stop_time.arrival_time,
@@ -138,7 +138,7 @@ class DelaysService:
             keys_to_set.append(key)
             objects_to_commit.append(ts_stop_time)
 
-        await self.ts_stop_time_repository.bulk_insert_delay_records(objects_to_commit, auto_commit=True)
+        await self.ts_stop_time_repo.bulk_insert_delay_records(objects_to_commit, auto_commit=True)
         await self.redis_cache.set_many_empty_keys(keys_to_set, expiration=60 * 5)
         number_of_delays_recorded = len(keys_to_set)
 
@@ -152,12 +152,12 @@ class DelaysService:
             int: The number of delays deleted.
         """
         cutoff_time = datetime.now() - timedelta(days=CLEANUP_DELAYS_AFTER_DAYS)
-        number_of_delays_deleted = await self.ts_stop_time_repository.delete_old_delays(cutoff_time)
+        number_of_delays_deleted = await self.ts_stop_time_repo.delete_old_delays(cutoff_time)
 
         logger.info(f"Deleted {number_of_delays_deleted} delays older than {CLEANUP_DELAYS_AFTER_DAYS} days.")
         return number_of_delays_deleted
 
-    def create_cache_key_for_schedule(self, schedule: RealTimeScheduleModel) -> str:
+    def create_cache_key_for_schedule(self, schedule: RealtimeScheduleModel) -> str:
         return CacheKeys.Delays.DELAYS_RECORDING_KEY_TEMPLATE.format(
             route_code=schedule.static_schedule.route.short_name,
             stop_id=schedule.static_schedule.stop.id,
@@ -179,7 +179,7 @@ async def provide_delays_service(
         DelaysService: The delays service instance.
     """
     return DelaysService(
-        ts_stop_time_repository=TSStopTimeRepository(session=timescale_db_session),
+        ts_stop_time_repo=TSStopTimeRepo(session=timescale_db_session),
         schedule_service=await provide_schedule_service(db_session=db_session),
         realtime_service=await provide_realtime_service(db_session=db_session),
         redis_cache=redis_cache,
