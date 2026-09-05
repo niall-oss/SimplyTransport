@@ -11,13 +11,13 @@ from SimplyTransport.lib.tracing import CreateSpan
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..domain.realtime.enums import ScheduleRealtionship
-from ..domain.realtime.stop_time.model import RTStopTimeModel
-from ..domain.realtime.trip.model import RTTripModel
-from ..domain.realtime.vehicle.model import RTVehicleModel
-from ..domain.route.model import RouteModel
-from ..domain.stop.model import StopModel
-from ..domain.trip.model import TripModel
+from ..domain.realtime.enums import ScheduleRelationship
+from ..domain.realtime.stop_time.rt_stop_time_model import RTStopTimeModel
+from ..domain.realtime.trip.rt_trip_model import RTTripModel
+from ..domain.realtime.vehicle.rt_vehicle_model import RTVehicleModel
+from ..domain.route.route_model import RouteModel
+from ..domain.stop.stop_model import StopModel
+from ..domain.trip.trip_model import TripModel
 from . import time_date_conversions as tdc
 from .db.database import async_session_factory, get_async_engine
 from .gtfs_importers import (
@@ -215,7 +215,7 @@ async def load_realtime_import_shared_context(dataset: str) -> RealtimeImportSha
 
 def _trip_descriptor_relationship(trip: dict[str, Any]) -> str:
     rel = trip.get("schedule_relationship")
-    return rel if rel else ScheduleRealtionship.SCHEDULED.value
+    return rel if rel else ScheduleRelationship.SCHEDULED.value
 
 
 def _effective_trip_id_for_trip_update(trip_update: dict[str, Any]) -> str | None:
@@ -223,14 +223,14 @@ def _effective_trip_id_for_trip_update(trip_update: dict[str, Any]) -> str | Non
     trip = trip_update.get("trip") or {}
     props = trip_update.get("trip_properties") or {}
     rel = _trip_descriptor_relationship(trip)
-    if rel == ScheduleRealtionship.DUPLICATED.value and props.get("trip_id"):
+    if rel == ScheduleRelationship.DUPLICATED.value and props.get("trip_id"):
         return str(props["trip_id"])
     tid = trip.get("trip_id")
     return str(tid) if tid else None
 
 
 def _skip_stop_time_import_for_trip_relationship(rel: str) -> bool:
-    return rel in (ScheduleRealtionship.CANCELED.value, ScheduleRealtionship.DELETED.value)
+    return rel in (ScheduleRelationship.CANCELED.value, ScheduleRelationship.DELETED.value)
 
 
 def _parse_rt_start_time(time_str: str | None) -> time:
@@ -355,7 +355,7 @@ class RealTimeImporter:
                     except TypeError, ValueError:
                         continue
 
-                    st_rel = stop_time.get("schedule_relationship") or (ScheduleRealtionship.SCHEDULED.value)
+                    st_rel = stop_time.get("schedule_relationship") or (ScheduleRelationship.SCHEDULED.value)
                     arrival = stop_time.get("arrival") or {}
                     departure = stop_time.get("departure") or {}
 

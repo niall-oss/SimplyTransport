@@ -1,23 +1,23 @@
 from litestar.di import NamedDependency
-from SimplyTransport.domain.database_statistics.model import (
+from SimplyTransport.domain.database_statistics.database_statistic_model import (
     DatabaseStatisticModel,
     DatabaseStatisticWithPercentage,
 )
 from SimplyTransport.domain.database_statistics.statistic_type import StatisticType
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...timescale.ts_stop_times.repo import TSStopTimeRepository
-from ..database_statistics.repo import DatabaseStatisticRepository
+from ...timescale.ts_stop_times.ts_stop_time_repo import TSStopTimeRepo
+from ..database_statistics.database_statistic_repo import DatabaseStatisticRepo
 
 
 class StatisticsService:
     def __init__(
         self,
-        database_statistic_repository: DatabaseStatisticRepository,
-        ts_stop_time_repository: TSStopTimeRepository,
+        database_statistic_repo: DatabaseStatisticRepo,
+        ts_stop_time_repo: TSStopTimeRepo,
     ):
-        self.database_statistic_repository = database_statistic_repository
-        self.ts_stop_time_repository = ts_stop_time_repository
+        self.database_statistic_repo = database_statistic_repo
+        self.ts_stop_time_repo = ts_stop_time_repo
 
     async def update_all_statistics(self) -> None:
         """Updates all statistics."""
@@ -30,51 +30,45 @@ class StatisticsService:
     async def update_gtfs_row_counts(self) -> None:
         """Updates the GTFS row counts."""
 
-        row_counts = await self.database_statistic_repository.get_gtfs_record_counts()
-        await self.database_statistic_repository.add_row_counts(row_counts, StatisticType.GTFS_RECORD_COUNTS)
+        row_counts = await self.database_statistic_repo.get_gtfs_record_counts()
+        await self.database_statistic_repo.add_row_counts(row_counts, StatisticType.GTFS_RECORD_COUNTS)
 
     async def update_operator_row_counts(self) -> None:
         """Updates the operator row counts."""
 
-        route_counts = await self.database_statistic_repository.get_operator_route_counts()
-        await self.database_statistic_repository.add_row_counts(
-            route_counts, StatisticType.OPERATOR_ROUTE_COUNTS
-        )
+        route_counts = await self.database_statistic_repo.get_operator_route_counts()
+        await self.database_statistic_repo.add_row_counts(route_counts, StatisticType.OPERATOR_ROUTE_COUNTS)
 
-        trip_counts = await self.database_statistic_repository.get_operator_trip_counts()
-        await self.database_statistic_repository.add_row_counts(
-            trip_counts, StatisticType.OPERATOR_TRIP_COUNTS
-        )
+        trip_counts = await self.database_statistic_repo.get_operator_trip_counts()
+        await self.database_statistic_repo.add_row_counts(trip_counts, StatisticType.OPERATOR_TRIP_COUNTS)
 
     async def update_stop_feature_counts(self) -> None:
         """Updates the stop feature counts."""
 
-        stop_feature_counts = await self.database_statistic_repository.get_stop_feature_counts()
-        await self.database_statistic_repository.add_row_counts(
+        stop_feature_counts = await self.database_statistic_repo.get_stop_feature_counts()
+        await self.database_statistic_repo.add_row_counts(
             stop_feature_counts, StatisticType.STOP_FEATURE_COUNTS
         )
 
     async def update_delay_record_counts(self) -> None:
         """Updates the delay record counts."""
 
-        daily_delay_record_counts = (
-            await self.ts_stop_time_repository.get_delay_record_counts_for_last_n_hours(24)
-        )
-        await self.database_statistic_repository.add_row_counts(
+        daily_delay_record_counts = await self.ts_stop_time_repo.get_delay_record_counts_for_last_n_hours(24)
+        await self.database_statistic_repo.add_row_counts(
             daily_delay_record_counts, StatisticType.DELAY_RECORD_COUNTS
         )
 
-        weekly_delay_record_counts = (
-            await self.ts_stop_time_repository.get_delay_record_counts_for_last_n_hours(24 * 7)
+        weekly_delay_record_counts = await self.ts_stop_time_repo.get_delay_record_counts_for_last_n_hours(
+            24 * 7
         )
-        await self.database_statistic_repository.add_row_counts(
+        await self.database_statistic_repo.add_row_counts(
             weekly_delay_record_counts, StatisticType.DELAY_RECORD_COUNTS
         )
 
-        monthly_delay_record_counts = (
-            await self.ts_stop_time_repository.get_delay_record_counts_for_last_n_hours(24 * 30)
+        monthly_delay_record_counts = await self.ts_stop_time_repo.get_delay_record_counts_for_last_n_hours(
+            24 * 30
         )
-        await self.database_statistic_repository.add_row_counts(
+        await self.database_statistic_repo.add_row_counts(
             monthly_delay_record_counts, StatisticType.DELAY_RECORD_COUNTS
         )
 
@@ -162,6 +156,6 @@ async def provide_statistics_service(
         StatisticsService: A StatisticsService instance.
     """
     return StatisticsService(
-        database_statistic_repository=DatabaseStatisticRepository(session=db_session),
-        ts_stop_time_repository=TSStopTimeRepository(session=timescale_db_session),
+        database_statistic_repo=DatabaseStatisticRepo(session=db_session),
+        ts_stop_time_repo=TSStopTimeRepo(session=timescale_db_session),
     )

@@ -1,10 +1,10 @@
 """Assemble API contracts for detailed stop reads (routes + features)."""
 
-from SimplyTransport.api_contract.map_payloads import RouteSummary, StopFeatureSummary
-from SimplyTransport.api_contract.stop import Stop, StopDetailed
+from SimplyTransport.api_contracts.map_contracts import RouteSummary, StopFeatureSummary
+from SimplyTransport.api_contracts.stop_contracts import Stop, StopDetailed
 
-from ..route.repo import RouteRepository
-from ..stop.repo import StopRepository
+from ..route.route_repo import RouteRepo
+from ..stop.stop_repo import StopRepo
 
 
 def _street_view_url(lat: float | None, lon: float | None) -> str:
@@ -14,12 +14,12 @@ def _street_view_url(lat: float | None, lon: float | None) -> str:
 
 
 async def assemble_stop_detailed(
-    stop_repository: StopRepository,
-    route_repository: RouteRepository,
+    stop_repo: StopRepo,
+    route_repo: RouteRepo,
     stop_id: str,
 ) -> StopDetailed:
-    stop = await stop_repository.get_by_id_with_stop_feature(stop_id)
-    route_models = await route_repository.get_routes_by_stop_id(stop_id)
+    stop = await stop_repo.get_by_id_with_stop_feature(stop_id)
+    route_models = await route_repo.get_routes_by_stop_id(stop_id)
     routes = [
         RouteSummary(route_id=r.id, short_name=r.short_name, long_name=r.long_name) for r in route_models
     ]

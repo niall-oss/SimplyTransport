@@ -2,9 +2,11 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import cast
 
-from SimplyTransport.domain.realtime.enums import ScheduleRealtionship
-from SimplyTransport.domain.realtime.realtime_schedule.repo import overlay_for_static_schedule_row
-from SimplyTransport.domain.realtime.stop_time.model import RTStopTimeModel
+from SimplyTransport.domain.realtime.enums import ScheduleRelationship
+from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_repo import (
+    overlay_for_static_schedule_row,
+)
+from SimplyTransport.domain.realtime.stop_time.rt_stop_time_model import RTStopTimeModel
 
 _utc = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
 _utc_later = datetime(2025, 1, 1, 12, 1, 0, tzinfo=UTC)
@@ -14,7 +16,7 @@ def _row(
     stop_id: str,
     stop_sequence: int,
     *,
-    rel: ScheduleRealtionship = ScheduleRealtionship.SCHEDULED,
+    rel: ScheduleRelationship = ScheduleRelationship.SCHEDULED,
     created_at: datetime | None = None,
 ):
     return SimpleNamespace(
@@ -29,7 +31,7 @@ def _row(
 
 
 def test_overlay_exact_match_returns_skipped_row_with_exact_true():
-    skipped = _row("S10", 10, rel=ScheduleRealtionship.SKIPPED)
+    skipped = _row("S10", 10, rel=ScheduleRelationship.SKIPPED)
     key: tuple[str, str, int] = ("T1", "S10", 10)
     by_triple: dict[tuple[str, str, int], RTStopTimeModel] = {key: cast(RTStopTimeModel, skipped)}
     out = overlay_for_static_schedule_row("T1", "S10", 10, by_triple, cast(list[RTStopTimeModel], [skipped]))
@@ -40,7 +42,7 @@ def test_overlay_exact_match_returns_skipped_row_with_exact_true():
 
 def test_overlay_predecessor_prefers_non_skipped_over_later_skipped():
     r5 = _row("S5", 5, created_at=_utc)
-    r8 = _row("S8", 8, rel=ScheduleRealtionship.SKIPPED, created_at=_utc_later)
+    r8 = _row("S8", 8, rel=ScheduleRelationship.SKIPPED, created_at=_utc_later)
     by_triple: dict[tuple[str, str, int], RTStopTimeModel] = {}
     trip_rows = cast(list[RTStopTimeModel], [r5, r8])
     out = overlay_for_static_schedule_row("T1", "S10", 10, by_triple, trip_rows)
@@ -50,8 +52,8 @@ def test_overlay_predecessor_prefers_non_skipped_over_later_skipped():
 
 
 def test_overlay_successor_prefers_non_skipped_at_min_sequence():
-    r12 = _row("S12", 12, rel=ScheduleRealtionship.SCHEDULED, created_at=_utc)
-    r15 = _row("S15", 15, rel=ScheduleRealtionship.SKIPPED, created_at=_utc_later)
+    r12 = _row("S12", 12, rel=ScheduleRelationship.SCHEDULED, created_at=_utc)
+    r15 = _row("S15", 15, rel=ScheduleRelationship.SKIPPED, created_at=_utc_later)
     by_triple: dict[tuple[str, str, int], RTStopTimeModel] = {}
     trip_rows = cast(list[RTStopTimeModel], [r12, r15])
     out = overlay_for_static_schedule_row("T1", "S10", 10, by_triple, trip_rows)

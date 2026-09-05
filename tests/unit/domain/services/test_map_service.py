@@ -4,21 +4,21 @@ from SimplyTransport.domain.services.map_service import MapService
 
 
 def test_map_service_init():
-    stop_repository = AsyncMock()
-    route_repository = AsyncMock()
-    shape_repository = AsyncMock()
-    trip_repository = AsyncMock()
-    rt_vehicle_repository = AsyncMock()
+    stop_repo = AsyncMock()
+    route_repo = AsyncMock()
+    shape_repo = AsyncMock()
+    trip_repo = AsyncMock()
+    rt_vehicle_repo = AsyncMock()
 
     map_service = MapService(
-        stop_repository=stop_repository,
-        route_repository=route_repository,
-        shape_repository=shape_repository,
-        trip_repository=trip_repository,
-        rt_vehicle_repository=rt_vehicle_repository,
+        stop_repo=stop_repo,
+        route_repo=route_repo,
+        shape_repo=shape_repo,
+        trip_repo=trip_repo,
+        rt_vehicle_repo=rt_vehicle_repo,
     )
-    assert map_service.stop_repository is stop_repository
-    assert map_service.route_repository is route_repository
-    assert map_service.shape_repository is shape_repository
-    assert map_service.trip_repository is trip_repository
-    assert map_service.rt_vehicle_repository is rt_vehicle_repository
+    assert map_service.stop_repo is stop_repo
+    assert map_service.route_repo is route_repo
+    assert map_service.shape_repo is shape_repo
+    assert map_service.trip_repo is trip_repo
+    assert map_service.rt_vehicle_repo is rt_vehicle_repo

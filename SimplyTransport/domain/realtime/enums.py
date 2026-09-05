@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class ScheduleRealtionship(StrEnum):
+class ScheduleRelationship(StrEnum):
     SCHEDULED = "SCHEDULED"
     SKIPPED = "SKIPPED"
     NO_DATA = "NO_DATA"
@@ -16,7 +16,7 @@ class ScheduleRealtionship(StrEnum):
 
 # Trip-level relationships that remove the trip from normal service
 REMOVED_TRIP_RELATIONSHIPS: frozenset[str] = frozenset[str](
-    {ScheduleRealtionship.CANCELED.value, ScheduleRealtionship.DELETED.value}
+    {ScheduleRelationship.CANCELED.value, ScheduleRelationship.DELETED.value}
 )
 
 

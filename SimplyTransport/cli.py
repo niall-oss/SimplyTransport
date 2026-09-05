@@ -15,8 +15,8 @@ from rich.table import Table
 
 from SimplyTransport.lib.db import services as db_services
 
+from .domain.events.event_repo import create_event_with_session, provide_event_repo
 from .domain.events.event_types import EventType
-from .domain.events.repo import create_event_with_session, provide_event_repo
 from .lib import settings as lib_settings
 from .lib.cache import provide_redis_service
 from .lib.cache_keys import CacheKeys

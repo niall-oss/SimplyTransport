@@ -489,11 +489,11 @@ from SimplyTransport.domain.enums import DayOfWeek
 @pytest.mark.asyncio
 async def test_get_schedule_on_stop_for_day_should_call_repository():
     # Arrange
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     stop_id = "stop_id"
@@ -503,12 +503,12 @@ async def test_get_schedule_on_stop_for_day_should_call_repository():
     await schedule_service.get_schedule_on_stop_for_day(stop_id=stop_id, day=day)
 
     # Assert
-    schedule_repository.get_schedule_on_stop_for_day.assert_called_once_with(
+    schedule_repo.get_schedule_on_stop_for_day.assert_called_once_with(
         stop_id=stop_id, day=day
     )
 ```
 
-In this example we specifically want to ensure that the `get_schedule_on_stop_for_day` method on the `schedule_repository` is called with the correct arguments and just one time.
+In this example we specifically want to ensure that the `get_schedule_on_stop_for_day` method on the `schedule_repo` is called with the correct arguments and just one time.
 
 ## Code Coverage
 

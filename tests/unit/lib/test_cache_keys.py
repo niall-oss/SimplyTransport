@@ -85,7 +85,7 @@ def test_key_builder_from_query_nearby_map():
 
 
 def test_nearby_map_cache_key_builder_defaults_radius():
-    from SimplyTransport.controllers.api.map import _nearby_map_cache_key_builder
+    from SimplyTransport.controllers.api.map_controller import _nearby_map_cache_key_builder
 
     request = AsyncMock(spec=Request)
     type(request).query_params = PropertyMock(return_value={"latitude": "53.1", "longitude": "-7.2"})

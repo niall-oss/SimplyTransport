@@ -2,15 +2,15 @@ from datetime import date, time
 from unittest.mock import AsyncMock
 
 import pytest
-from SimplyTransport.domain.calendar.model import CalendarModel
-from SimplyTransport.domain.calendar_dates.model import CalendarDateModel
+from SimplyTransport.domain.calendar.calendar_model import CalendarModel
+from SimplyTransport.domain.calendar_dates.calendar_date_model import CalendarDateModel
 from SimplyTransport.domain.enums import DayOfWeek, ExceptionType
-from SimplyTransport.domain.route.model import RouteModel
-from SimplyTransport.domain.schedule.model import StaticScheduleModel
+from SimplyTransport.domain.route.route_model import RouteModel
+from SimplyTransport.domain.schedule.static_schedule_model import StaticScheduleModel
 from SimplyTransport.domain.services.schedule_service import ScheduleService
-from SimplyTransport.domain.stop.model import StopModel
-from SimplyTransport.domain.stop_times.model import StopTimeModel
-from SimplyTransport.domain.trip.model import TripModel
+from SimplyTransport.domain.stop.stop_model import StopModel
+from SimplyTransport.domain.stop_times.stop_time_model import StopTimeModel
+from SimplyTransport.domain.trip.trip_model import TripModel
 
 ON_DATE = date(2021, 6, 30)  # Wednesday
 
@@ -85,11 +85,11 @@ def _added_exception(service_id: str, exception_date: date = ON_DATE) -> Calenda
 @pytest.mark.asyncio
 async def test_get_schedule_on_stop_for_day_should_call_repository():
     # Arrange
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     stop_id = "stop_id"
@@ -99,19 +99,19 @@ async def test_get_schedule_on_stop_for_day_should_call_repository():
     await schedule_service.get_schedule_on_stop_for_day(stop_id=stop_id, day=day)
 
     # Assert
-    schedule_repository.get_static_schedules.assert_called_once_with(stop_id=stop_id, day=day)
+    schedule_repo.get_static_schedules.assert_called_once_with(stop_id=stop_id, day=day)
 
 
 @pytest.mark.asyncio
 async def test_get_schedule_on_stop_for_day_should_have_equal_static_schedules():
     # Arrange
     mock_schedule_data = [AsyncMock(), AsyncMock()]
-    schedule_repository = AsyncMock()
-    schedule_repository.get_static_schedules.return_value = mock_schedule_data
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    schedule_repo.get_static_schedules.return_value = mock_schedule_data
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     stop_id = "stop_id"
@@ -121,18 +121,18 @@ async def test_get_schedule_on_stop_for_day_should_have_equal_static_schedules()
     result = await schedule_service.get_schedule_on_stop_for_day(stop_id=stop_id, day=day)
 
     # Assert
-    schedule_repository.get_static_schedules.assert_called_once_with(stop_id=stop_id, day=day)
+    schedule_repo.get_static_schedules.assert_called_once_with(stop_id=stop_id, day=day)
     assert len(result) == len(mock_schedule_data)
 
 
 @pytest.mark.asyncio
 async def test_get_schedule_on_stop_for_day_between_times_should_call_repository():
     # Arrange
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     stop_id = "stop_id"
@@ -146,7 +146,7 @@ async def test_get_schedule_on_stop_for_day_between_times_should_call_repository
     )
 
     # Assert
-    schedule_repository.get_static_schedules.assert_called_once_with(
+    schedule_repo.get_static_schedules.assert_called_once_with(
         stop_id=stop_id, day=day, start_time=start_time, end_time=end_time
     )
 
@@ -155,12 +155,12 @@ async def test_get_schedule_on_stop_for_day_between_times_should_call_repository
 async def test_get_schedule_on_stop_for_day_between_times_should_have_equal_static_schedules():
     # Arrange
     mock_schedule_data = [AsyncMock(), AsyncMock()]
-    schedule_repository = AsyncMock()
-    schedule_repository.get_static_schedules.return_value = mock_schedule_data
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    schedule_repo.get_static_schedules.return_value = mock_schedule_data
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     stop_id = "stop_id"
@@ -174,7 +174,7 @@ async def test_get_schedule_on_stop_for_day_between_times_should_have_equal_stat
     )
 
     # Assert
-    schedule_repository.get_static_schedules.assert_called_once_with(
+    schedule_repo.get_static_schedules.assert_called_once_with(
         stop_id=stop_id, day=day, start_time=start_time, end_time=end_time
     )
     assert len(result) == len(mock_schedule_data)
@@ -201,11 +201,11 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_reverse():
             is_added_exception=False,
         ),
     ]
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     # Act
@@ -238,11 +238,11 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_no_change():
             is_added_exception=False,
         ),
     ]
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     # Act
@@ -275,11 +275,11 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_no_change_no
             is_added_exception=False,
         ),
     ]
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
 
     # Act
@@ -293,22 +293,22 @@ async def test_apply_custom_23_00_sorting_should_return_sorted_list_no_change_no
 
 @pytest.mark.asyncio
 async def test_remove_exceptions_keeps_in_range_weekday_service():
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_removed_exceptions_on_date.return_value = []
-    schedule_service = ScheduleService(AsyncMock(), calendar_date_repository)
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_removed_exceptions_on_date.return_value = []
+    schedule_service = ScheduleService(AsyncMock(), calendar_date_repo)
     schedule = _schedule(_calendar())
 
     result = await schedule_service.remove_exceptions_and_inactive_calendars([schedule], on_date=ON_DATE)
 
     assert result == [schedule]
-    calendar_date_repository.get_removed_exceptions_on_date.assert_called_once_with(date=ON_DATE)
+    calendar_date_repo.get_removed_exceptions_on_date.assert_called_once_with(date=ON_DATE)
 
 
 @pytest.mark.asyncio
 async def test_remove_exceptions_drops_outside_date_range():
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_removed_exceptions_on_date.return_value = []
-    schedule_service = ScheduleService(AsyncMock(), calendar_date_repository)
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_removed_exceptions_on_date.return_value = []
+    schedule_service = ScheduleService(AsyncMock(), calendar_date_repo)
     schedule = _schedule(_calendar(end_date=date(2021, 6, 1)))
 
     result = await schedule_service.remove_exceptions_and_inactive_calendars([schedule], on_date=ON_DATE)
@@ -318,9 +318,9 @@ async def test_remove_exceptions_drops_outside_date_range():
 
 @pytest.mark.asyncio
 async def test_remove_exceptions_drops_when_weekday_flag_is_off():
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_removed_exceptions_on_date.return_value = []
-    schedule_service = ScheduleService(AsyncMock(), calendar_date_repository)
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_removed_exceptions_on_date.return_value = []
+    schedule_service = ScheduleService(AsyncMock(), calendar_date_repo)
     schedule = _schedule(_calendar(wednesday=0))
 
     result = await schedule_service.remove_exceptions_and_inactive_calendars([schedule], on_date=ON_DATE)
@@ -330,9 +330,9 @@ async def test_remove_exceptions_drops_when_weekday_flag_is_off():
 
 @pytest.mark.asyncio
 async def test_remove_exceptions_drops_removed_service_on_date():
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_removed_exceptions_on_date.return_value = [_removed_exception("svc1")]
-    schedule_service = ScheduleService(AsyncMock(), calendar_date_repository)
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_removed_exceptions_on_date.return_value = [_removed_exception("svc1")]
+    schedule_service = ScheduleService(AsyncMock(), calendar_date_repo)
     schedule = _schedule(_calendar())
 
     result = await schedule_service.remove_exceptions_and_inactive_calendars([schedule], on_date=ON_DATE)
@@ -342,9 +342,9 @@ async def test_remove_exceptions_drops_removed_service_on_date():
 
 @pytest.mark.asyncio
 async def test_remove_exceptions_ignores_removed_exception_for_other_service():
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_removed_exceptions_on_date.return_value = [_removed_exception("other")]
-    schedule_service = ScheduleService(AsyncMock(), calendar_date_repository)
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_removed_exceptions_on_date.return_value = [_removed_exception("other")]
+    schedule_service = ScheduleService(AsyncMock(), calendar_date_repo)
     schedule = _schedule(_calendar())
 
     result = await schedule_service.remove_exceptions_and_inactive_calendars([schedule], on_date=ON_DATE)
@@ -354,26 +354,26 @@ async def test_remove_exceptions_ignores_removed_exception_for_other_service():
 
 @pytest.mark.asyncio
 async def test_add_in_added_exceptions_returns_unchanged_when_none():
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_added_exceptions_on_date.return_value = []
-    schedule_service = ScheduleService(schedule_repository, calendar_date_repository)
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_added_exceptions_on_date.return_value = []
+    schedule_service = ScheduleService(schedule_repo, calendar_date_repo)
     schedule = _schedule(_calendar())
 
     result = await schedule_service.add_in_added_exceptions([schedule], on_date=ON_DATE, stop_id="s1")
 
     assert result == [schedule]
-    schedule_repository.get_static_schedules_for_service_ids.assert_not_called()
+    schedule_repo.get_static_schedules_for_service_ids.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_add_in_added_exceptions_appends_and_flags_new_trips():
     extra = _schedule(_calendar(id="holiday", monday=0, tuesday=0, wednesday=0), trip_id="extra1")
-    schedule_repository = AsyncMock()
-    schedule_repository.get_static_schedules_for_service_ids.return_value = [extra]
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_added_exceptions_on_date.return_value = [_added_exception("holiday")]
-    schedule_service = ScheduleService(schedule_repository, calendar_date_repository)
+    schedule_repo = AsyncMock()
+    schedule_repo.get_static_schedules_for_service_ids.return_value = [extra]
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_added_exceptions_on_date.return_value = [_added_exception("holiday")]
+    schedule_service = ScheduleService(schedule_repo, calendar_date_repo)
     existing = _schedule(_calendar())
 
     result = await schedule_service.add_in_added_exceptions(
@@ -383,7 +383,7 @@ async def test_add_in_added_exceptions_appends_and_flags_new_trips():
     assert result == [existing, extra]
     assert existing.is_added_exception is False
     assert extra.is_added_exception is True
-    schedule_repository.get_static_schedules_for_service_ids.assert_called_once_with(
+    schedule_repo.get_static_schedules_for_service_ids.assert_called_once_with(
         service_ids=["holiday"],
         stop_id="s1",
         start_time=time(9, 0),
@@ -396,11 +396,11 @@ async def test_add_in_added_exceptions_appends_and_flags_new_trips():
 async def test_add_in_added_exceptions_dedupes_existing_trips():
     existing = _schedule(_calendar(id="holiday"), trip_id="same-trip")
     duplicate = _schedule(_calendar(id="holiday"), trip_id="same-trip")
-    schedule_repository = AsyncMock()
-    schedule_repository.get_static_schedules_for_service_ids.return_value = [duplicate]
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_added_exceptions_on_date.return_value = [_added_exception("holiday")]
-    schedule_service = ScheduleService(schedule_repository, calendar_date_repository)
+    schedule_repo = AsyncMock()
+    schedule_repo.get_static_schedules_for_service_ids.return_value = [duplicate]
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_added_exceptions_on_date.return_value = [_added_exception("holiday")]
+    schedule_service = ScheduleService(schedule_repo, calendar_date_repo)
 
     result = await schedule_service.add_in_added_exceptions([existing], on_date=ON_DATE, stop_id="s1")
 
@@ -411,27 +411,27 @@ async def test_add_in_added_exceptions_dedupes_existing_trips():
 @pytest.mark.asyncio
 async def test_add_in_added_exceptions_fetches_when_incoming_list_is_empty():
     extra = _schedule(_calendar(id="holiday"), trip_id="extra1")
-    schedule_repository = AsyncMock()
-    schedule_repository.get_static_schedules_for_service_ids.return_value = [extra]
-    calendar_date_repository = AsyncMock()
-    calendar_date_repository.get_added_exceptions_on_date.return_value = [_added_exception("holiday")]
-    schedule_service = ScheduleService(schedule_repository, calendar_date_repository)
+    schedule_repo = AsyncMock()
+    schedule_repo.get_static_schedules_for_service_ids.return_value = [extra]
+    calendar_date_repo = AsyncMock()
+    calendar_date_repo.get_added_exceptions_on_date.return_value = [_added_exception("holiday")]
+    schedule_service = ScheduleService(schedule_repo, calendar_date_repo)
 
     result = await schedule_service.add_in_added_exceptions([], on_date=ON_DATE, stop_id="s1")
 
     assert result == [extra]
     assert extra.is_added_exception is True
-    schedule_repository.get_static_schedules_for_service_ids.assert_called_once()
+    schedule_repo.get_static_schedules_for_service_ids.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_get_by_trip_id_calls_repository():
     # Arrange
-    schedule_repository = AsyncMock()
-    calendar_date_repository = AsyncMock()
+    schedule_repo = AsyncMock()
+    calendar_date_repo = AsyncMock()
     schedule_service = ScheduleService(
-        schedule_repository=schedule_repository,
-        calendar_date_repository=calendar_date_repository,
+        schedule_repo=schedule_repo,
+        calendar_date_repo=calendar_date_repo,
     )
     trip_id = "trip_id"
 
@@ -439,4 +439,4 @@ async def test_get_by_trip_id_calls_repository():
     await schedule_service.get_by_trip_id(trip_id=trip_id)
 
     # Assert
-    schedule_repository.get_by_trip_id.assert_called_once_with(trip_id=trip_id)
+    schedule_repo.get_by_trip_id.assert_called_once_with(trip_id=trip_id)

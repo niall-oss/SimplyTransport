@@ -3,30 +3,30 @@ from datetime import date, time
 from litestar.di import NamedDependency
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..calendar_dates.repo import CalendarDateRepository
+from ..calendar_dates.calendar_date_repo import CalendarDateRepo
 from ..enums import DayOfWeek
-from ..schedule.model import StaticScheduleModel
-from ..schedule.repo import ScheduleRepository
+from ..schedule.schedule_repo import ScheduleRepo
+from ..schedule.static_schedule_model import StaticScheduleModel
 
 
 class ScheduleService:
     def __init__(
         self,
-        schedule_repository: ScheduleRepository,
-        calendar_date_repository: CalendarDateRepository,
+        schedule_repo: ScheduleRepo,
+        calendar_date_repo: CalendarDateRepo,
     ):
-        self.schedule_repository = schedule_repository
-        self.calendar_date_repository = calendar_date_repository
+        self.schedule_repo = schedule_repo
+        self.calendar_date_repo = calendar_date_repo
 
     async def get_schedule_on_stop_for_day(self, stop_id: str, day: DayOfWeek) -> list[StaticScheduleModel]:
         """Returns a list of schedules for the given stop and day"""
-        return await self.schedule_repository.get_static_schedules(stop_id=stop_id, day=day)
+        return await self.schedule_repo.get_static_schedules(stop_id=stop_id, day=day)
 
     async def get_all_schedule_for_day_between_times(
         self, day: DayOfWeek, start_time: time, end_time: time, trips: list[str]
     ) -> list[StaticScheduleModel]:
         """Returns all schedules that are currently active"""
-        return await self.schedule_repository.get_static_schedules(
+        return await self.schedule_repo.get_static_schedules(
             day=day, start_time=start_time, end_time=end_time, trips=trips
         )
 
@@ -34,7 +34,7 @@ class ScheduleService:
         self, stop_id: str, day: DayOfWeek, start_time: time, end_time: time
     ) -> list[StaticScheduleModel]:
         """Returns a list of schedules for the given stop and day"""
-        return await self.schedule_repository.get_static_schedules(
+        return await self.schedule_repo.get_static_schedules(
             stop_id=stop_id, day=day, start_time=start_time, end_time=end_time
         )
 
@@ -61,7 +61,7 @@ class ScheduleService:
         self, static_schedules: list[StaticScheduleModel], on_date: date
     ) -> list[StaticScheduleModel]:
         """Drop regular service that is inactive or removed on on_date."""
-        exceptions_from_db = await self.calendar_date_repository.get_removed_exceptions_on_date(date=on_date)
+        exceptions_from_db = await self.calendar_date_repo.get_removed_exceptions_on_date(date=on_date)
         removed_exception_service_ids = {exc.service_id for exc in exceptions_from_db}
 
         static_schedules_filtered = []
@@ -85,12 +85,12 @@ class ScheduleService:
         trips: list[str] | None = None,
     ) -> list[StaticScheduleModel]:
         """Append trips that calendar_dates adds on on_date."""
-        added_exceptions = await self.calendar_date_repository.get_added_exceptions_on_date(date=on_date)
+        added_exceptions = await self.calendar_date_repo.get_added_exceptions_on_date(date=on_date)
         if not added_exceptions:
             return static_schedules
 
         added_service_ids = {exc.service_id for exc in added_exceptions}
-        extra_schedules = await self.schedule_repository.get_static_schedules_for_service_ids(
+        extra_schedules = await self.schedule_repo.get_static_schedules_for_service_ids(
             service_ids=list(added_service_ids),
             stop_id=stop_id,
             start_time=start_time,
@@ -113,9 +113,9 @@ class ScheduleService:
 
     async def get_by_trip_id(self, trip_id: str) -> list[StaticScheduleModel]:
         """Returns a list of schedules for the given trip_id"""
-        return await self.schedule_repository.get_by_trip_id(trip_id=trip_id)
+        return await self.schedule_repo.get_by_trip_id(trip_id=trip_id)
 
 
 async def provide_schedule_service(db_session: NamedDependency[AsyncSession]) -> ScheduleService:
     """Constructs repository and service objects for the schedule service."""
-    return ScheduleService(ScheduleRepository(session=db_session), CalendarDateRepository(session=db_session))
+    return ScheduleService(ScheduleRepo(session=db_session), CalendarDateRepo(session=db_session))

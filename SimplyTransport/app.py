@@ -7,7 +7,7 @@ from SimplyTransport.lib import exception_handlers
 from SimplyTransport.lib.db import services as db_services
 
 from .cli import CLIPlugin
-from .controllers import create_api_router, create_views_router
+from .controllers.api_routers import create_api_router, create_views_router
 from .lib import settings
 from .lib.cache import provide_redis_service, redis_service_cache_config_factory, redis_store_factory
 from .lib.compression import compression_config
