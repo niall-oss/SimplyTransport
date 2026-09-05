@@ -32,6 +32,13 @@ async def test_realtime_stop_page_returns_not_found_for_unknown_stop(
     assert "Sorry this stop could not be found" in response.text
 
 
+async def test_realtime_route_page_returns_not_found_for_unknown_route(
+    async_client: AsyncTestClient,
+) -> None:
+    response = await async_client.get("/realtime/route/does-not-exist/0")
+    assert "Sorry this route could not be found" in response.text
+
+
 async def test_realtime_route_page_renders_for_known_route(async_client: AsyncTestClient) -> None:
     response = await async_client.get("/realtime/route/3623_54684/0")
     assert response.status_code == 200

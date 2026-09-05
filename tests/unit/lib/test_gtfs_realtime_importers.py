@@ -186,3 +186,79 @@ def test_dedup_records_by_key_keeps_last():
     second = ("t1", "r1", "b")
     other = ("t2", "r1", "c")
     assert rt.dedup_records_by_key([first, other, second], (0, 1)) == [second, other]
+
+
+def test_effective_trip_id_uses_properties_for_duplicated():
+    assert (
+        rt._effective_trip_id_for_trip_update(
+            {
+                "trip": {"trip_id": "descriptor", "schedule_relationship": "DUPLICATED"},
+                "trip_properties": {"trip_id": "actual-trip"},
+            }
+        )
+        == "actual-trip"
+    )
+    assert rt._effective_trip_id_for_trip_update({"trip": {"trip_id": "t1"}}) == "t1"
+    assert rt._effective_trip_id_for_trip_update({"trip": {}}) is None
+
+
+def test_skip_stop_time_import_for_removed_trips():
+    assert rt._skip_stop_time_import_for_trip_relationship("CANCELED") is True
+    assert rt._skip_stop_time_import_for_trip_relationship("DELETED") is True
+    assert rt._skip_stop_time_import_for_trip_relationship("SCHEDULED") is False
+
+
+@pytest.mark.asyncio
+async def test_import_stop_times_skips_cancelled_unknown_and_bad_sequence():
+    importer = rt.RealTimeImporter("", "", "TFI")
+    data = {
+        "entity": [
+            {
+                "id": "cancelled",
+                "trip_update": {
+                    "trip": {"trip_id": "T1", "schedule_relationship": "CANCELED"},
+                    "stop_time_update": [{"stop_id": "S1", "stop_sequence": 1}],
+                },
+            },
+            {
+                "id": "ok",
+                "trip_update": {
+                    "trip": {"trip_id": "T1"},
+                    "stop_time_update": [
+                        {"stop_id": "S1"},
+                        {"stop_id": "S1", "stop_sequence": "bad"},
+                        {"stop_id": "missing-stop", "stop_sequence": 2},
+                        {
+                            "stop_id": "S1",
+                            "stop_sequence": 3,
+                            "arrival": {"delay": 10},
+                            "departure": {"delay": 12},
+                        },
+                    ],
+                },
+            },
+        ]
+    }
+    shared = rt.RealtimeImportSharedContext(trips_in_db=frozenset({"T1"}))
+    stop_result = MagicMock()
+    stop_result.scalars.return_value = ["S1"]
+    session = AsyncMock()
+    session.execute = AsyncMock(return_value=stop_result)
+    session_cm = AsyncMock()
+    session_cm.__aenter__.return_value = session
+    session_cm.__aexit__.return_value = None
+    progress = MagicMock()
+
+    with (
+        patch.object(rt, "async_session_factory", return_value=session_cm),
+        patch.object(rt, "snapshot_copy_table", new_callable=AsyncMock) as copy,
+    ):
+        count = await importer.import_stop_times(data, progress, shared)
+
+    assert count == 1
+    assert copy.await_args is not None
+    records = copy.await_args.kwargs["records"]
+    assert len(records) == 1
+    assert records[0][0] == "S1"
+    assert records[0][1] == "T1"
+    assert records[0][2] == 3

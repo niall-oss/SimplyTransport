@@ -38,7 +38,9 @@ class StopTimeModel(BigIntBase):
     dataset: Mapped[str] = mapped_column(String(length=80))
 
     def is_active_between_times(self, start_time: time, end_time: time) -> bool:
-        """True if arrival_time falls between the two times."""
+        """True if arrival_time falls in the window, wrapping overnight when start > end."""
+        if start_time > end_time:
+            return self.arrival_time >= start_time or self.arrival_time <= end_time
         return start_time <= self.arrival_time <= end_time
 
 
