@@ -40,16 +40,14 @@
 
 	/**
 	 * @param {object} detail - StopDetailed JSON
-	 * @param {number} directionForRouteLinks - direction segment for /realtime/route/... links
+	 * @param {string} directionForRouteLinks - direction segment for /realtime/route/... links
 	 */
 	function buildPopupHtmlFromDetailed(detail, directionForRouteLinks) {
 		const stop = detail.stop;
 		const code = stop.code || "";
 		const title = `${code} - ${stop.name}`.trim();
 		const routes = detail.routes || [];
-		const dir = Number.isFinite(directionForRouteLinks)
-			? directionForRouteLinks
-			: 0;
+		const dir = directionForRouteLinks || "OUTBOUND";
 		const routesHtml = routes
 			.map(
 				(r) =>
@@ -146,7 +144,7 @@
 		const dir =
 			props.map_direction !== undefined && props.map_direction !== null
 				? String(props.map_direction)
-				: "0";
+				: "OUTBOUND";
 		const routeHref = `/realtime/route/${encodeURIComponent(String(props.route_id))}/${encodeURIComponent(dir)}`;
 		const titleText = [routeLabel, agency].filter(Boolean).join(" - ") || "Vehicle";
 		const titleInner =

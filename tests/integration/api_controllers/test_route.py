@@ -11,6 +11,7 @@ async def test_routes_list_returns_all_routes(async_client: AsyncTestClient) -> 
     assert len(routes) == 2
     assert routes[0]["id"] == "3623_54684"
     assert routes[0]["short_name"] == "4"
+    assert routes[0]["route_type"] == "BUS"
     assert routes[1]["id"] == "3623_54691"
     assert routes[1]["short_name"] == "9"
 

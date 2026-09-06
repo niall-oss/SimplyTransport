@@ -16,7 +16,7 @@
             <h2>No operator found</h2>
         {% endif %}
         <h2 class="flex-gap">
-            <a href="/realtime/route/{{ route.id }}/{%- if direction == 1 -%}0{%- else -%}1{%- endif -%}"><span class="h2-svg">
+            <a href="/realtime/route/{{ route.id }}/{%- if direction == 1 -%}OUTBOUND{%- else -%}INBOUND{%- endif -%}"><span class="h2-svg">
                 <img src="/static/swap-arrow.svg"
                      alt="Two arrows going up and down"
                      width="100%"

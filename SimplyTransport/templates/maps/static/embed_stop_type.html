@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}
-    {{ request.app.openapi_config.title }} — {{ map_type }}
+    {{ request.app.openapi_config.title }} — {{ map_label }}
 {% endblock title %}
 {% block content %}
     <div class="inner-container inner-container-expand">
-        <h1>Stops — {{ map_type }}</h1>
+        <h1>Stops — {{ map_label }}</h1>
         <div class="map-container map-container--maplibre"
              data-map-type="{{ map_type }}">
             <div id="map-element"></div>

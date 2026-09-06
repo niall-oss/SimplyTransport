@@ -21,8 +21,7 @@ async def test_docs_renderer_returns_200(async_client: AsyncTestClient, url: str
     assert response.status_code == 200
 
 
-async def test_default_is_stoplight(async_client: AsyncTestClient) -> None:
+async def test_default_is_scalar(async_client: AsyncTestClient) -> None:
     response = await async_client.get("/docs")
     assert response.status_code == 200
-    assert "stoplight" in response.text
-    assert "elements" in response.text
+    assert "scalar" in response.text.lower()

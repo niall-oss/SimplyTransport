@@ -51,8 +51,7 @@
             loader.style.removeProperty("display");
         }
 
-        const dir = Number.parseInt(String(direction), 10);
-        const url = `/api/v1/map/route/${encodeURIComponent(routeId)}/${Number.isNaN(dir) ? direction : dir}`;
+        const url = `/api/v1/map/route/${encodeURIComponent(routeId)}/${encodeURIComponent(direction)}`;
 
         fetch(url)
             .then((r) => {

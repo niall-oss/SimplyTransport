@@ -1,5 +1,3 @@
-from urllib.parse import quote
-
 import pytest
 from litestar.testing import AsyncTestClient
 
@@ -29,7 +27,7 @@ async def test_stop_map_returns_404_if_stop_not_found(async_client: AsyncTestCli
 
 
 async def test_route_map_returns_json(async_client: AsyncTestClient) -> None:
-    response = await async_client.get("/api/v1/map/route/3623_54684/0")
+    response = await async_client.get("/api/v1/map/route/3623_54684/OUTBOUND")
     assert response.status_code == 200
     payload = response.json()
     assert payload.get("zoom") == 12
@@ -38,9 +36,9 @@ async def test_route_map_returns_json(async_client: AsyncTestClient) -> None:
 
 
 async def test_route_map_returns_404_if_route_not_found(async_client: AsyncTestClient) -> None:
-    response = await async_client.get("/api/v1/map/route/fakeroute_id/0")
+    response = await async_client.get("/api/v1/map/route/fakeroute_id/OUTBOUND")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Route map not found for route fakeroute_id and direction 0"
+    assert response.json()["detail"] == "Route map not found for route fakeroute_id and direction OUTBOUND"
 
 
 async def test_nearby_map_returns_stops_around_point(async_client: AsyncTestClient) -> None:
@@ -80,7 +78,7 @@ async def test_agency_map_returns_404_for_unknown_agency(async_client: AsyncTest
 
 
 async def test_static_stop_map_returns_json(async_client: AsyncTestClient) -> None:
-    map_type = quote("All Stops")
+    map_type = "ALL_STOPS"
     response = await async_client.get(f"/api/v1/map/stop/aggregated/{map_type}")
     assert response.status_code == 200
     payload = response.json()

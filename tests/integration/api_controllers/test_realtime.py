@@ -3,7 +3,7 @@ from litestar.testing import AsyncTestClient
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
-_REALTIME_WINDOW = "/api/v1/realtime/RT_E2E_S1?start_time=11%3A50%3A00&end_time=12%3A30%3A00&day=1"
+_REALTIME_WINDOW = "/api/v1/realtime/RT_E2E_S1?start_time=11%3A50%3A00&end_time=12%3A30%3A00&day=TUESDAY"
 
 
 async def test_realtime_schedule_returns_rows_for_stop_in_time_window(
@@ -20,7 +20,7 @@ async def test_realtime_schedule_returns_rows_for_stop_in_time_window(
 
 async def test_realtime_schedule_returns_400_when_start_equals_end(async_client: AsyncTestClient) -> None:
     response = await async_client.get(
-        "/api/v1/realtime/RT_E2E_S1?start_time=12%3A00%3A00&end_time=12%3A00%3A00&day=1"
+        "/api/v1/realtime/RT_E2E_S1?start_time=12%3A00%3A00&end_time=12%3A00%3A00&day=TUESDAY"
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Start time cannot be equal to end time"
@@ -30,7 +30,7 @@ async def test_realtime_schedule_returns_400_when_window_exceeds_4_hours(
     async_client: AsyncTestClient,
 ) -> None:
     response = await async_client.get(
-        "/api/v1/realtime/RT_E2E_S1?start_time=07%3A00%3A00&end_time=12%3A00%3A00&day=1"
+        "/api/v1/realtime/RT_E2E_S1?start_time=07%3A00%3A00&end_time=12%3A00%3A00&day=TUESDAY"
     )
     assert response.status_code == 400
     assert (

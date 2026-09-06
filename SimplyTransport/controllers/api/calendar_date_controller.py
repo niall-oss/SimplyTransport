@@ -32,7 +32,7 @@ class CalendarDateController(Controller):
             total=total, calendar_dates=[CalendarDate.model_validate(obj) for obj in result]
         )
 
-    @get("/{service_id:str}", summary="CalendarDates by service ID", raises=[NotFoundException])
+    @get("/{service_id:str}", summary="Calendar dates by service ID", raises=[NotFoundException])
     async def get_calendar_dates_by_id(
         self, repo: NamedDependency[CalendarDateRepo], service_id: FromPath[str]
     ) -> list[CalendarDate]:
@@ -43,8 +43,7 @@ class CalendarDateController(Controller):
 
     @get(
         "/date/{date:date}",
-        summary="All calendar dates on a given date",
-        description="Date format = YYYY-MM-DD",
+        summary="Calendar dates on a given day",
     )
     async def get_active_calendar_dates_on_date(
         self, repo: NamedDependency[CalendarDateRepo], date: FromPath[date]

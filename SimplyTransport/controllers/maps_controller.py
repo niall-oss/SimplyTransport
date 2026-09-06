@@ -49,16 +49,33 @@ class MapsController(Controller):
     @get("/stop/{map_type:str}")
     async def stop_maps(self, map_type: FromPath[str]) -> Template:
         try:
-            StaticStopMapTypes(map_type)
+            resolved = StaticStopMapTypes(map_type)
         except ValueError:
             logger.bind(map_type=map_type).error("Invalid static stop map type")
             return Template(
                 "maps/stop.html",
-                context={"error": "Sorry, this map is not available", "map_type": map_type},
+                context={
+                    "error": "Sorry, this map is not available",
+                    "map_type": map_type,
+                    "map_label": map_type,
+                },
             )
 
-        return Template("maps/stop.html", context={"map_type": map_type})
+        return Template(
+            "maps/stop.html",
+            context={"map_type": resolved.value, "map_label": resolved.label},
+        )
 
     @get("/static/stop/{map_type:str}")
     async def static_stop_map(self, map_type: FromPath[str]) -> Template:
-        return Template("maps/static/embed_stop_type.html", context={"map_type": map_type})
+        try:
+            resolved = StaticStopMapTypes(map_type)
+        except ValueError:
+            return Template(
+                "maps/static/embed_stop_type.html",
+                context={"map_type": map_type, "map_label": map_type},
+            )
+        return Template(
+            "maps/static/embed_stop_type.html",
+            context={"map_type": resolved.value, "map_label": resolved.label},
+        )

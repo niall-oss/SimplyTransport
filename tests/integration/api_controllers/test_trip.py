@@ -13,7 +13,7 @@ async def test_trip_returns_match_for_known_id(async_client: AsyncTestClient) ->
     assert trip["service_id"] == "290"
     assert trip["headsign"] == "Monkstown Ave"
     assert trip["short_name"] == "2616"
-    assert trip["direction"] == 0
+    assert trip["direction"] == "OUTBOUND"
     assert trip["block_id"] == "4002"
     assert trip["dataset"] == "TFI"
 

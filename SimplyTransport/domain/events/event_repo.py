@@ -1,7 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset, OrderBy
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from litestar.di import NamedDependency
@@ -45,23 +44,16 @@ class EventRepo(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
             OrderBy(EventModel.created_at, order),  # type: ignore
             limit_offset,
         )
-
-        if total == 0:
-            raise NotFoundError()
-
         return results, total
 
     async def get_single_pretty_event_by_type(self, event_type: EventType) -> EventModel | None:
-        try:
-            events = await self.get_paginated_events_by_type_with_total(
-                event_type=event_type, limit_offset=LimitOffset(limit=1, offset=0), order="desc"
-            )
-        except NotFoundError:
+        events, _total = await self.get_paginated_events_by_type_with_total(
+            event_type=event_type, limit_offset=LimitOffset(limit=1, offset=0), order="desc"
+        )
+        if not events:
             return None
-        else:
-            event = events[0][0]
-            current_time = datetime.now(UTC)
-            return event.add_pretty_created_at(current_time)
+        current_time = datetime.now(UTC)
+        return events[0].add_pretty_created_at(current_time)
 
     async def get_multiple_pretty_events_by_types(
         self, event_types: list[EventType]
@@ -92,14 +84,12 @@ class EventRepo(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
         return {event.event_type: event.add_pretty_created_at(current_time) for event in events}
 
     async def get_most_recent_event_by_type(self, event_type: EventType) -> EventModel | None:
-        try:
-            events = await self.get_paginated_events_by_type_with_total(
-                event_type=event_type, limit_offset=LimitOffset(limit=1, offset=0), order="desc"
-            )
-        except NotFoundError:
+        events, _total = await self.get_paginated_events_by_type_with_total(
+            event_type=event_type, limit_offset=LimitOffset(limit=1, offset=0), order="desc"
+        )
+        if not events:
             return None
-        else:
-            return events[0][0]
+        return events[0]
 
     async def get_paginated_events_with_total(
         self, limit_offset: LimitOffset, order: Literal["asc", "desc"] = "desc"
@@ -110,10 +100,6 @@ class EventRepo(SQLAlchemyAsyncRepository[EventModel]):  # type: ignore
             OrderBy(EventModel.created_at, order),  # type: ignore
             limit_offset,
         )
-
-        if total == 0:
-            raise NotFoundError()
-
         return results, total
 
     async def get_paginated_events(

@@ -4,6 +4,7 @@ from litestar import Controller, get
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import ValidationException
 from litestar.params import FromPath
+from SimplyTransport.api_contracts.enums import to_domain
 from SimplyTransport.api_contracts.schedule_contracts import StaticSchedule
 
 from ...domain.enums import DayOfWeek
@@ -22,7 +23,15 @@ class ScheduleController(Controller):
         "schedule_service": Provide(provide_schedule_service),
     }
 
-    @get("/{stop_id:str}", summary="Get schedule for a stop", raises=[ValidationException])
+    @get(
+        "/{stop_id:str}",
+        summary="Static timetable for a stop",
+        description=(
+            "Trips at this stop. Defaults to 10 minutes ago through 60 minutes from now, for today. "
+            "The window cannot be more than 6 hours."
+        ),
+        raises=[ValidationException],
+    )
     async def get_schedule_by_stop_id(
         self,
         schedule_service: NamedDependency[ScheduleService],
@@ -31,16 +40,13 @@ class ScheduleController(Controller):
         end_time: EndTimeQuery = None,
         day: DayQuery = None,
     ) -> list[StaticSchedule]:
-        """Returns a list of schedules for the given stop_id"""
-
         if start_time is None:
             start_time = (datetime.now() - timedelta(minutes=10)).time()
 
         if end_time is None:
             end_time = (datetime.now() + timedelta(minutes=60)).time()
 
-        if day is None:
-            day = DayOfWeek(datetime.now().weekday())
+        domain_day = DayOfWeek(datetime.now().weekday()) if day is None else to_domain(day, DayOfWeek)
 
         if start_time == end_time:
             raise ValidationException("Start time cannot be equal to end time")
@@ -53,10 +59,10 @@ class ScheduleController(Controller):
                 extra={"start_time": start_time, "end_time": end_time, "hours_difference": difference},
             )
 
-        on_date = next_date_for_day(day)
+        on_date = next_date_for_day(domain_day)
         schedules = await schedule_service.get_schedule_on_stop_for_day_between_times(
             stop_id=stop_id,
-            day=day,
+            day=domain_day,
             start_time=start_time,
             end_time=end_time,
         )

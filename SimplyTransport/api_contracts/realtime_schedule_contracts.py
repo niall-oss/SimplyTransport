@@ -1,9 +1,29 @@
-from datetime import time
+from datetime import date, time
 
+from pydantic import Field
 from SimplyTransport.api_contracts.base_contracts import ApiBaseModel
-from SimplyTransport.domain.realtime.enums import OnTimeStatus
-from SimplyTransport.domain.realtime.stop_time.rt_stop_time_model import RTStopTime
-from SimplyTransport.domain.realtime.trip.rt_trip_model import RTTrip
+from SimplyTransport.api_contracts.enums import DirectionField
+from SimplyTransport.domain.realtime.enums import OnTimeStatus, ScheduleRelationship
+
+
+class RTStopTime(ApiBaseModel):
+    stop_id: str
+    trip_id: str
+    stop_sequence: int
+    schedule_relationship: ScheduleRelationship
+    arrival_delay: int
+    departure_delay: int
+
+
+class RTTrip(ApiBaseModel):
+    trip_id: str
+    route_id: str
+    start_time: time
+    start_date: date
+    schedule_relationship: ScheduleRelationship
+    direction: DirectionField = Field(
+        description="Direction of travel. Agencies do not always use OUTBOUND and INBOUND the same way.",
+    )
 
 
 class RealtimeSchedule(ApiBaseModel):

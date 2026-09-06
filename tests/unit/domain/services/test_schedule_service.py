@@ -68,7 +68,7 @@ def _removed_exception(service_id: str, exception_date: date = ON_DATE) -> Calen
     return CalendarDateModel(
         service_id=service_id,
         date=exception_date,
-        exception_type=ExceptionType.removed,
+        exception_type=ExceptionType.REMOVED,
         dataset="test",
     )
 
@@ -77,7 +77,7 @@ def _added_exception(service_id: str, exception_date: date = ON_DATE) -> Calenda
     return CalendarDateModel(
         service_id=service_id,
         date=exception_date,
-        exception_type=ExceptionType.added,
+        exception_type=ExceptionType.ADDED,
         dataset="test",
     )
 

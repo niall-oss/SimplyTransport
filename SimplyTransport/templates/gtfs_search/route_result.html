@@ -8,10 +8,10 @@
     <tbody>
         {% if routes %}
             {% for route in routes %}
-                <tr hx-get="/realtime/route/{{ route.id }}/1"
+                <tr hx-get="/realtime/route/{{ route.id }}/INBOUND"
                     hx-trigger="click"
                     hx-target="body"
-                    hx-push-url="/realtime/route/{{ route.id }}/1">
+                    hx-push-url="/realtime/route/{{ route.id }}/INBOUND">
                     <td class="dense-text">{{ route.short_name }}</td>
                     <td class="dense-text">{{ route.long_name }}</td>
                 </tr>

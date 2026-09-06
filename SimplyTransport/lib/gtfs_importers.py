@@ -11,7 +11,7 @@ from sqlalchemy import delete, select, text
 from ..domain.agency.agency_model import AgencyModel
 from ..domain.calendar.calendar_model import CalendarModel
 from ..domain.calendar_dates.calendar_date_model import CalendarDateModel
-from ..domain.enums import RouteType
+from ..domain.enums import ExceptionType, RouteType
 from ..domain.route.route_model import RouteModel
 from ..domain.shape.shape_model import ShapeModel
 from ..domain.stop.stop_model import StopModel
@@ -463,9 +463,9 @@ class CalendarDateImporter(OrmBatchImporter):
 
     def build_model(self, row: dict[str, Any]) -> CalendarDateModel:
         if row["exception_type"] == "1":
-            exception_type = "added"
+            exception_type = ExceptionType.ADDED
         elif row["exception_type"] == "2":
-            exception_type = "removed"
+            exception_type = ExceptionType.REMOVED
         else:
             raise ValueError(f"Invalid exception_type '{row['exception_type']}'")
 

@@ -13,21 +13,17 @@ from .. import settings
 from .tags import Tags
 
 DESCRIPTION = """
-SimplyTransport - An API for retrieving transport information.
-
-This API provides access to transport data for agencies, routes, stops, trips, stop times, calendars, calendar dates, shapes, realtime information, schedules, maps, and statistics.
-
-These endpoints are extensions of the GTFS standard with some additional endpoints for additional features such as maps and statistics.
-"""  # noqa: E501
+Irish public transport data: GTFS tables, live arrivals, schedules, maps, delays, and statistics.
+"""
 
 favicon = "<link rel='icon' type='image/png' href='/favicon.ico'>"
 render_plugins = [
+    ScalarRenderPlugin(favicon=favicon),
     StoplightRenderPlugin(favicon=favicon),
     YamlRenderPlugin(favicon=favicon),
     JsonRenderPlugin(favicon=favicon),
     RapidocRenderPlugin(favicon=favicon),
     RedocRenderPlugin(favicon=favicon),
-    ScalarRenderPlugin(favicon=favicon),
     SwaggerRenderPlugin(favicon=favicon),
 ]
 

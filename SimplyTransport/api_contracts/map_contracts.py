@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import Field
 from SimplyTransport.api_contracts.base_contracts import ApiBaseModel
+from SimplyTransport.api_contracts.enums import DirectionField
+from SimplyTransport.domain.maps.enums import StaticStopMapTypes
 
 
 class RouteSummary(ApiBaseModel):
@@ -63,7 +65,9 @@ class StopMapPayload(ApiBaseModel):
     )
     zoom: int = 14
     focus_stop_id: str
-    direction: int
+    direction: DirectionField = Field(
+        description="Direction of travel. Agencies do not always use OUTBOUND and INBOUND the same way.",
+    )
     routes: list[RouteLayer]
     vehicles: list[VehiclePoint]
     stops: list[StopMapStop]
@@ -78,7 +82,9 @@ class RouteMapPayload(ApiBaseModel):
     )
     zoom: int = 12
     route_id: str
-    direction: int
+    direction: DirectionField = Field(
+        description="Direction of travel. Agencies do not always use OUTBOUND and INBOUND the same way.",
+    )
     route: RouteLayer
     vehicles: list[VehiclePoint]
     stops: list[StopMapStop]
@@ -118,5 +124,5 @@ class StaticStopsMapPayload(ApiBaseModel):
         description="Map center as (longitude, latitude) for MapLibre",
     )
     zoom: int = 7
-    map_type: str
+    map_type: StaticStopMapTypes
     stops: list[StopMapStop]
