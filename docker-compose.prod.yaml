@@ -7,11 +7,11 @@ services:
       service: simplytransport
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       postgres:
-        condition: service_started
+        condition: service_healthy
       timescale:
-        condition: service_started
+        condition: service_healthy
       opentelemetry-collector:
         condition: service_started
 

@@ -25,6 +25,7 @@ jobs:
         run: |
           cat << EOF > .env
           ENVIRONMENT=PR-TEST-CI
+          LOG_LEVEL=INFO
 
           # Database
           DB_URL=postgresql+asyncpg://example:example@postgres:5432/example
@@ -44,10 +45,17 @@ jobs:
           # Redis
           REDIS_PASSWORD=example
           REDIS_PORT=6379
+
+          # GTFS placeholders (compose interpolates these; CI does not fetch live feeds)
+          GTFS_TFI_REALTIME_URL=example
+          GTFS_TFI_REALTIME_VEHICLES_URL=example
+          GTFS_TFI_API_KEY_1=example
+          GTFS_TFI_API_KEY_2=example
+          GTFS_TFI_DATASET=TFI
           EOF
 
       - name: Build and start services
-        run: docker compose -f docker-compose.prod.yaml up -d --build --wait
+        run: docker compose -f docker-compose.prod.yaml up -d --build --wait --wait-timeout 120
 
       - name: Check service status
         run: |
