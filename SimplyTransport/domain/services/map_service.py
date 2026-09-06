@@ -4,6 +4,7 @@ from typing import Literal
 
 from advanced_alchemy.exceptions import NotFoundError
 from litestar.di import NamedDependency
+from SimplyTransport.api_contracts.enums import Direction as ApiDirection
 from SimplyTransport.api_contracts.map_contracts import (
     AgencyRoutesMapPayload,
     GeoJSONLineString,
@@ -23,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...lib.logging.logging import provide_logger
 from ...lib.tracing import CreateSpan
+from ..enums import Direction
 from ..maps.enums import StaticStopMapTypes
 from ..realtime.vehicle.rt_vehicle_repo import RTVehicleRepo
 from ..route.route_repo import RouteRepo
@@ -163,7 +165,7 @@ class MapService:
             center=(stop.lon, stop.lat),
             zoom=14,
             focus_stop_id=stop.id,
-            direction=direction,
+            direction=ApiDirection(Direction(direction).name),
             routes=route_layers,
             vehicles=vehicles_payload,
             stops=stops_out,
@@ -218,7 +220,7 @@ class MapService:
             center=(first.lon, first.lat),
             zoom=12,
             route_id=route.id,
-            direction=direction,
+            direction=ApiDirection(Direction(direction).name),
             route=route_layer,
             vehicles=vehicles_payload,
             stops=stops_out,
@@ -370,7 +372,7 @@ class MapService:
         return StaticStopsMapPayload(
             center=center,
             zoom=7,
-            map_type=str(map_type.value),
+            map_type=map_type,
             stops=stops_out,
         )
 

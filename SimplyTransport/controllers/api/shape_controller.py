@@ -17,7 +17,7 @@ class ShapeController(Controller):
         "order_by_shape": Provide(provide_order_by_shapes),
     }
 
-    @get("/{shape_id:str}", summary="List of Shapes by shape Id", raises=[NotFoundException])
+    @get("/{shape_id:str}", summary="Shape points by shape ID", raises=[NotFoundException])
     async def get_shape_by_shape_id(
         self,
         repo: NamedDependency[ShapeRepo],

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}
-    {{ request.app.openapi_config.title }} - {{ map_type }}
+    {{ request.app.openapi_config.title }} - {{ map_label }}
 {% endblock title %}
 {% block content %}
-    <h1>{{ map_type }}</h1>
+    <h1>{{ map_label }}</h1>
     {% if error %}
         <h3>{{ error }}</h3>
     {% else %}

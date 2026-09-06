@@ -16,7 +16,7 @@ class CalendarDateRepo(SQLAlchemyAsyncRepository[CalendarDateModel]):  # type: i
 
         return await self.get_many(
             CalendarDateModel.date == date,
-            CalendarDateModel.exception_type == ExceptionType.removed,
+            CalendarDateModel.exception_type == ExceptionType.REMOVED,
         )
 
     async def get_added_exceptions_on_date(self, date: date) -> list[CalendarDateModel]:
@@ -24,7 +24,7 @@ class CalendarDateRepo(SQLAlchemyAsyncRepository[CalendarDateModel]):  # type: i
 
         return await self.get_many(
             CalendarDateModel.date == date,
-            CalendarDateModel.exception_type == ExceptionType.added,
+            CalendarDateModel.exception_type == ExceptionType.ADDED,
         )
 
     model_type = CalendarDateModel

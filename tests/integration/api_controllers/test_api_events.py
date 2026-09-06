@@ -23,6 +23,14 @@ async def test_events_paginated_by_type_returns_results(async_client: AsyncTestC
     assert payload["events"][0]["created_at"]
 
 
+async def test_events_paginated_by_type_return_empty_when_none(async_client: AsyncTestClient) -> None:
+    response = await async_client.get("api/v1/events/cleanup.events.deleted")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 0
+    assert payload["events"] == []
+
+
 async def test_events_paginated_by_type_return_400_for_unknown_type(async_client: AsyncTestClient) -> None:
     response = await async_client.get("api/v1/events/something.that.does.not.exist")
     assert response.status_code == 400

@@ -71,6 +71,8 @@ Realtime data is updated every minute.
 
 [Website Link](https://simplytransport.ie/apidocs)
 
+[Scalar](https://simplytransport.ie/docs) (default)
+
 [Redoc](https://simplytransport.ie/docs/redoc)
 
 [Swagger](https://simplytransport.ie/docs/swagger)

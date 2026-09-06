@@ -32,8 +32,8 @@ class DelaysController(Controller):
             "route_code",
             "scheduled_time",
         ),
-        summary="Get aggregated delay data for a route on a stop on a time",
-        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days",
+        summary="Aggregated delay for a stop, route, and scheduled time",
+        description=f"Values are in seconds. Limited to the last {MAXIMUM_LIMIT} days.",
         raises=[NotFoundException, ValidationException],
     )
     async def get_aggregated_delay_on_stop_on_route_on_time(
@@ -63,9 +63,11 @@ class DelaysController(Controller):
             "route_code",
             "scheduled_time",
         ),
-        summary="Get delay data for a route on a stop on a time",
-        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days "
-        f"or {MAXIMUM_LIMIT} records",
+        summary="Delay samples for a stop, route, and scheduled time",
+        description=(
+            f"Each row includes delay_in_minutes. "
+            f"Limited to the last {MAXIMUM_LIMIT} days or {MAXIMUM_LIMIT} records."
+        ),
         raises=[ValidationException],
     )
     async def get_delay_on_stop_on_route_on_time(
@@ -97,9 +99,11 @@ class DelaysController(Controller):
             "route_code",
             "scheduled_time",
         ),
-        summary="Get truncated delay data for a route on a stop on a time",
-        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days "
-        f"or {MAXIMUM_LIMIT} records",
+        summary="Delay samples for graphing",
+        description=(
+            f"Timestamp and delay_in_minutes only. "
+            f"Limited to the last {MAXIMUM_LIMIT} days or {MAXIMUM_LIMIT} records."
+        ),
         raises=[ValidationException],
     )
     async def get_truncated_delay_on_stop_on_route_on_time(
@@ -125,8 +129,8 @@ class DelaysController(Controller):
             CacheKeys.Delays.DELAYS_AGGREGATED_ROUTE_KEY_TEMPLATE,
             "route_code",
         ),
-        summary="Get aggregated delay data for a route",
-        description=f"All queries will be limited to the last {MAXIMUM_LIMIT} days",
+        summary="Aggregated delay for a route",
+        description=f"Values are in seconds. Limited to the last {MAXIMUM_LIMIT} days.",
         raises=[NotFoundException, ValidationException],
     )
     async def get_aggregated_delay_on_route(

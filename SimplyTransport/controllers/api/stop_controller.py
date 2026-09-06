@@ -28,7 +28,10 @@ class StopController(Controller):
     @get(
         "/{id:str}/detailed",
         summary="Stop with routes and features",
-        description="A stop with routes and features included.",
+        description=(
+            "Serving routes, shelter/wheelchair/realtime flags, "
+            "and a Street View link when the stop has coordinates."
+        ),
         raises=[NotFoundException],
         cache=_STOP_DETAILED_CACHE_TTL_S,
         cache_key_builder=key_builder_from_path(CacheKeys.StopApi.DETAILED_KEY_TEMPLATE, "id"),
@@ -63,7 +66,7 @@ class StopController(Controller):
     @get(
         "/search",
         summary="Search stops by name or code",
-        description="Search is case insensitive",
+        description="Case-insensitive prefix match on name or code.",
         raises=[NotFoundException],
     )
     async def search_stops_by_name_or_code(

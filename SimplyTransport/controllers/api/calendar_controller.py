@@ -36,8 +36,7 @@ class CalendarController(Controller):
 
     @get(
         "/date/{date:date}",
-        summary="All active calendars on a given date",
-        description="Date format = YYYY-MM-DD",
+        summary="Calendars active on a date",
     )
     async def get_active_calendars_on_date(
         self, repo: NamedDependency[CalendarRepo], date: FromPath[date]

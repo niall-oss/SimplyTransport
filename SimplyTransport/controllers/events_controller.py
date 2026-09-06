@@ -2,7 +2,6 @@ import math
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from advanced_alchemy.exceptions import NotFoundError
 from advanced_alchemy.filters import LimitOffset
 from litestar import Controller, get
 from litestar.di import NamedDependency, Provide
@@ -52,24 +51,16 @@ class EventsController(Controller):
     ) -> Template:
         if search_type is None or search_type == ALL_EVENTS:
             search_type = ALL_EVENTS
-            try:
-                events, total = await event_repo.get_paginated_events_with_total(
-                    limit_offset=limit_offset, order=sort
-                )
-            except NotFoundError:
-                events = []
-                total = 0
+            events, total = await event_repo.get_paginated_events_with_total(
+                limit_offset=limit_offset, order=sort
+            )
         else:
             if search_type not in [event_type.value for event_type in EventType.__members__.values()]:
                 raise ValidationException("Invalid event type")
 
-            try:
-                events, total = await event_repo.get_paginated_events_by_type_with_total(
-                    event_type=EventType(search_type), limit_offset=limit_offset, order=sort
-                )
-            except NotFoundError:
-                events = []
-                total = 0
+            events, total = await event_repo.get_paginated_events_by_type_with_total(
+                event_type=EventType(search_type), limit_offset=limit_offset, order=sort
+            )
 
         current_time = datetime.now(UTC)
         events = [event.add_pretty_created_at(current_time) for event in events]

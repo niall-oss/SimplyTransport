@@ -28,7 +28,7 @@
             <div class="flex-gap">
                 {% for map in map_types %}
                     <a style="text-decoration: none" href="/maps/stop/{{ map.value }}">
-                        <button class="no-line-break route-link-button dense-text">{{ map.value }}</button>
+                        <button class="no-line-break route-link-button dense-text">{{ map.label }}</button>
                     </a>
                 {% endfor %}
             </div>

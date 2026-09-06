@@ -20,7 +20,7 @@ class StatisticsController(Controller):
 
     @get(
         "/{key:str}",
-        summary="Get the most recent statistics for a given type",
+        summary="Latest statistics of this type",
         raises=[NotFoundException],
     )
     async def get_statistics_most_recent(
@@ -35,8 +35,7 @@ class StatisticsController(Controller):
 
     @get(
         "/{key:str}/{date:date}",
-        summary="Get the statistics for a given type on a given day",
-        description="Date format = YYYY-MM-DD",
+        summary="Statistics of this type on a given day",
         raises=[NotFoundException],
     )
     async def get_statistics_by_day(

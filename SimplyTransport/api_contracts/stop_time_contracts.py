@@ -1,7 +1,8 @@
 from datetime import time
 
+from pydantic import Field
 from SimplyTransport.api_contracts.base_contracts import ApiBaseModel
-from SimplyTransport.domain.enums import DropoffType, PickupType, Timepoint
+from SimplyTransport.api_contracts.enums import DropoffTypeField, PickupTypeField, TimepointField
 
 
 class StopTime(ApiBaseModel):
@@ -12,7 +13,16 @@ class StopTime(ApiBaseModel):
     stop_id: str
     stop_sequence: int
     stop_headsign: str | None
-    pickup_type: PickupType | None
-    dropoff_type: DropoffType | None
-    timepoint: Timepoint | None
+    pickup_type: PickupTypeField = Field(
+        default=None,
+        description="How riders board at this stop",
+    )
+    dropoff_type: DropoffTypeField = Field(
+        default=None,
+        description="How riders alight at this stop",
+    )
+    timepoint: TimepointField = Field(
+        default=None,
+        description="Whether times are exact. Null means exact.",
+    )
     dataset: str

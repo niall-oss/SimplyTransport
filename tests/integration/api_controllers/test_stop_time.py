@@ -10,6 +10,9 @@ async def test_stop_times_return_rows_for_known_stop(async_client: AsyncTestClie
     stop_times = response.json()
     assert len(stop_times) == 1
     assert stop_times[0]["stop_id"] == "8240DB000324"
+    assert stop_times[0]["pickup_type"] == "REGULARLY_SCHEDULED"
+    assert stop_times[0]["dropoff_type"] == "NO_DROP_OFF"
+    assert stop_times[0]["timepoint"] == "EXACT"
 
 
 async def test_stop_times_return_404_for_unknown_stop(async_client: AsyncTestClient) -> None:

@@ -35,7 +35,7 @@ async def _service_id_active_on_local_today(session: AsyncSession, dataset: str)
     removed_services = select(CalendarDateModel.service_id).where(
         CalendarDateModel.dataset == dataset,
         CalendarDateModel.date == today,
-        CalendarDateModel.exception_type == ExceptionType.removed,
+        CalendarDateModel.exception_type == ExceptionType.REMOVED,
     )
     result = await session.execute(
         select(CalendarModel.id)

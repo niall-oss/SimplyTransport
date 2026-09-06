@@ -25,7 +25,7 @@ async def test_calendar_dates_return_rows_for_known_service(async_client: AsyncT
     dates = response.json()
     assert len(dates) == 3
     assert dates[0]["service_id"] == "154"
-    assert dates[0]["exception_type"] == "removed"
+    assert dates[0]["exception_type"] == "REMOVED"
     assert all(item["service_id"] == "154" for item in dates)
 
 

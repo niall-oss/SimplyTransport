@@ -2,7 +2,7 @@
 <div class="flex-gap">
     {% if routes %}
         {% for route in routes %}
-            <a style="text-decoration: none" href="/realtime/route/{{ route.id }}/1">
+            <a style="text-decoration: none" href="/realtime/route/{{ route.id }}/INBOUND">
                 <button class="no-line-break route-link-button dense-text">{{ route.short_name }}</button>
             </a>
         {% endfor %}

@@ -1,6 +1,6 @@
 from pydantic import Field
 from SimplyTransport.api_contracts.base_contracts import ApiBaseModel
-from SimplyTransport.domain.enums import RouteType
+from SimplyTransport.api_contracts.enums import RouteTypeField
 
 
 class Route(ApiBaseModel):
@@ -9,8 +9,8 @@ class Route(ApiBaseModel):
     short_name: str
     long_name: str
     description: str | None
-    route_type: RouteType = Field(
-        description="Indicates the type of transportation used on a route",
+    route_type: RouteTypeField = Field(
+        description="Type of transport on this route",
     )
     url: str | None
     color: str | None

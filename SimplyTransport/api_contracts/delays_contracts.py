@@ -28,11 +28,11 @@ class TSStopTimeForGraph(ApiBaseModel):
 
 
 class TSStopTimeDelayAggregated(ApiBaseModel):
-    avg: int
-    max: int
-    min: int
-    standard_deviation: float
-    p50: int
-    p75: int
-    p90: int
+    avg: int = Field(description="Average delay in seconds")
+    max: int = Field(description="Largest delay in seconds")
+    min: int = Field(description="Smallest delay in seconds")
+    standard_deviation: float = Field(description="Standard deviation of delay in seconds")
+    p50: int = Field(description="Median delay in seconds")
+    p75: int = Field(description="75th percentile delay in seconds")
+    p90: int = Field(description="90th percentile delay in seconds")
     samples: int

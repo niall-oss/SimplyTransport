@@ -9,8 +9,8 @@ class Direction(IntEnum):
 
 
 class ExceptionType(StrEnum):
-    added = "added"
-    removed = "removed"
+    ADDED = "added"
+    REMOVED = "removed"
 
 
 class RouteType(IntEnum):
@@ -22,7 +22,7 @@ class RouteType(IntEnum):
     CABLE_TRAM = 5
     AERIAL_LIFT = 6
     FUNICULAR = 7
-    TROLLYBUS = 11
+    TROLLEYBUS = 11
     MONORAIL = 12
 
 

@@ -5,6 +5,8 @@ from litestar import Controller, MediaType, Request, get
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException, ValidationException
 from litestar.params import FromPath, QueryParameter
+from SimplyTransport.api_contracts.enums import Direction as DirectionName
+from SimplyTransport.api_contracts.enums import to_domain
 from SimplyTransport.api_contracts.map_contracts import (
     AgencyRoutesMapPayload,
     NearbyMapPayload,
@@ -12,6 +14,7 @@ from SimplyTransport.api_contracts.map_contracts import (
     StaticStopsMapPayload,
     StopMapPayload,
 )
+from SimplyTransport.domain.enums import Direction
 from SimplyTransport.domain.maps.enums import StaticStopMapTypes
 from SimplyTransport.domain.services.map_service import MapService, provide_map_service
 from SimplyTransport.lib.cache_keys import CacheKeys, key_builder_from_path
@@ -42,10 +45,10 @@ class MapController(Controller):
     @get(
         "/stop/nearby",
         media_type=MediaType.JSON,
-        summary="Get map data for stops near a point",
+        summary="Stops near a point",
         description=(
-            "Returns nearby stops within a radius of a latitude/longitude. "
-            "Optional radius_meters defaults to 1200 and must be between 1 and 1500."
+            "Stops within radius_meters of a latitude/longitude. "
+            "radius_meters defaults to 1200 and must be between 1 and 1500."
         ),
         cache=_MAP_JSON_STATIC_TTL_S,
         cache_key_builder=_nearby_map_cache_key_builder,
@@ -70,8 +73,7 @@ class MapController(Controller):
     @get(
         "/stop/aggregated/{map_type:str}",
         media_type=MediaType.JSON,
-        summary="Get map data for a static stop map type",
-        description="Static stop map category (see enum).",
+        summary="Stops for a static map type",
         raises=[ValidationException],
         cache=_MAP_JSON_STATIC_TTL_S,
         cache_key_builder=key_builder_from_path(
@@ -86,8 +88,8 @@ class MapController(Controller):
     @get(
         "/stop/{stop_id:str}",
         media_type=MediaType.JSON,
-        summary="Get map data for a stop",
-        description=("Returns GeoJSON-friendly route lines, stops, and vehicle positions for the stop map."),
+        summary="Map data for a stop",
+        description="Route lines, nearby stops on those routes, and vehicle positions.",
         raises=[NotFoundException],
         cache=_MAP_JSON_VEHICLE_TTL_S,
         cache_key_builder=key_builder_from_path(CacheKeys.StopMaps.STOP_MAP_KEY_TEMPLATE, "stop_id"),
@@ -106,10 +108,10 @@ class MapController(Controller):
         return payload
 
     @get(
-        "/route/{route_id:str}/{direction:int}",
+        "/route/{route_id:str}/{direction:str}",
         media_type=MediaType.JSON,
-        summary="Get map data for a route",
-        description="Returns GeoJSON-friendly route line, stops, and vehicle positions for the route map.",
+        summary="Map data for a route",
+        description="Route line, stops, and vehicle positions for one direction.",
         raises=[NotFoundException],
         cache=_MAP_JSON_VEHICLE_TTL_S,
         cache_key_builder=key_builder_from_path(
@@ -117,10 +119,14 @@ class MapController(Controller):
         ),
     )
     async def route_map_data(
-        self, route_id: FromPath[str], direction: FromPath[int], map_service: NamedDependency[MapService]
+        self,
+        route_id: FromPath[str],
+        direction: FromPath[DirectionName],
+        map_service: NamedDependency[MapService],
     ) -> RouteMapPayload:
+        domain_direction = to_domain(direction, Direction)
         try:
-            return await map_service.build_route_map_payload(route_id, direction)
+            return await map_service.build_route_map_payload(route_id, domain_direction)
         except NotFoundError as e:
             raise NotFoundException(
                 detail=f"Route map not found for route {route_id} and direction {direction}"
@@ -129,8 +135,8 @@ class MapController(Controller):
     @get(
         "/route/agency/{agency_id:str}",
         media_type=MediaType.JSON,
-        summary="Get map data for all routes of an agency",
-        description=('Use agency_id "All" for every agency.'),
+        summary="Map data for every route of an agency",
+        description='Use agency_id "All" for every agency.',
         raises=[NotFoundException],
         cache=_MAP_JSON_STATIC_TTL_S,
         cache_key_builder=key_builder_from_path(

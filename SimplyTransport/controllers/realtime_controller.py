@@ -5,6 +5,8 @@ from litestar import Controller, get
 from litestar.di import NamedDependency, Provide
 from litestar.params import FromPath, FromQuery
 from litestar.response import Template
+from SimplyTransport.api_contracts.enums import Direction as DirectionName
+from SimplyTransport.api_contracts.enums import to_domain
 from SimplyTransport.lib.cache_keys import (
     CacheKeys,
     key_builder_from_path,
@@ -164,7 +166,7 @@ class RealtimeController(Controller):
         )
 
     @get(
-        "/route/{route_id:str}/{direction:int}",
+        "/route/{route_id:str}/{direction:str}",
         cache=86400,
         cache_key_builder=key_builder_from_path(
             CacheKeys.RealTime.REALTIME_ROUTE_KEY_TEMPLATE, "route_id", "direction"
@@ -173,10 +175,11 @@ class RealtimeController(Controller):
     async def realtime_route(
         self,
         route_id: FromPath[str],
-        direction: FromPath[Direction],
+        direction: FromPath[DirectionName],
         route_repo: NamedDependency[RouteRepo],
         stop_repo: NamedDependency[StopRepo],
     ) -> Template:
+        domain_direction = to_domain(direction, Direction)
         try:
             route = await route_repo.get_by_id_with_agency(route_id)
         except NotFoundError:
@@ -184,11 +187,11 @@ class RealtimeController(Controller):
                 template_name="/errors/404.html",
                 context={"message": "Sorry this route could not be found, try the search bar above."},
             )
-        stops_and_sequences = await stop_repo.get_by_route_id_with_sequence(route.id, direction)
+        stops_and_sequences = await stop_repo.get_by_route_id_with_sequence(route.id, domain_direction)
 
         return Template(
             template_name="realtime/route.html",
-            context={"route": route, "stops": stops_and_sequences, "direction": direction},
+            context={"route": route, "stops": stops_and_sequences, "direction": domain_direction},
         )
 
     @get(

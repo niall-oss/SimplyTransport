@@ -20,7 +20,7 @@ class RouteController(Controller):
     @get(
         "/",
         summary="All routes",
-        description="Can be filtered by agency id",
+        description="Pass agencyId to limit to one operator. 404 if that agency has no routes.",
         raises=[NotFoundException],
     )
     async def get_all_routes(
@@ -28,7 +28,7 @@ class RouteController(Controller):
         repo: NamedDependency[RouteRepo],
         agency_id: Annotated[
             str | None,
-            QueryParameter(name="agencyId", description="Optional: Agency ID to filter by"),
+            QueryParameter(name="agencyId", description="Agency ID to filter by"),
         ] = None,
     ) -> list[Route]:
         if agency_id:
@@ -42,7 +42,7 @@ class RouteController(Controller):
     @get(
         "/count",
         summary="All routes with total count",
-        description="Can be filtered by agency id",
+        description="Same filters as the list endpoint, plus a total count.",
         raises=[NotFoundException],
     )
     async def get_all_routes_and_count(
@@ -50,7 +50,7 @@ class RouteController(Controller):
         repo: NamedDependency[RouteRepo],
         agency_id: Annotated[
             str | None,
-            QueryParameter(name="agencyId", description="Optional: Agency ID to filter by"),
+            QueryParameter(name="agencyId", description="Agency ID to filter by"),
         ] = None,
     ) -> RouteWithTotal:
         if agency_id:

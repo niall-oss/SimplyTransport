@@ -23,7 +23,7 @@ class TripController(Controller):
 
     @get(
         "/route/{route_id:str}",
-        summary="All trips by route id",
+        summary="Trips on a route",
         raises=[NotFoundException],
     )
     async def get_all_trips_by_route_id(
@@ -37,7 +37,7 @@ class TripController(Controller):
 
     @get(
         "/route/count/{route_id:str}",
-        summary="All trips by route_id with total count",
+        summary="Trips on a route with total count",
         raises=[NotFoundException],
     )
     async def get_all_trips_by_route_id_and_count(

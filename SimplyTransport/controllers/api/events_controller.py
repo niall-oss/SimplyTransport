@@ -18,8 +18,8 @@ class EventsController(Controller):
 
     @get(
         "/",
-        summary="Get paginated events",
-        raises=[NotFoundException],
+        summary="Paginated events",
+        description="Newest first by default. Empty list if there are no events.",
     )
     async def get_events(
         self,
@@ -27,20 +27,16 @@ class EventsController(Controller):
         limit_offset: NamedDependency[LimitOffset],
         order: Annotated[
             Literal["desc", "asc"],
-            QueryParameter(description="Order by descending or ascending"),
+            QueryParameter(description="Sort by created_at"),
         ] = "desc",
     ) -> EventsWithTotal:
         result, total = await repo.get_paginated_events_with_total(limit_offset, order)
-
-        if not result:
-            raise NotFoundException(detail="Events not found")
-
         return EventsWithTotal(total=total, events=[Event.model_validate(obj) for obj in result])
 
     @get(
         "/{type:str}",
-        summary="Get paginated events by type",
-        raises=[NotFoundException],
+        summary="Paginated events of one type",
+        description="Newest first by default. Empty list if that type has no events.",
     )
     async def get_events_by_type(
         self,
@@ -49,19 +45,15 @@ class EventsController(Controller):
         limit_offset: NamedDependency[LimitOffset],
         order: Annotated[
             Literal["desc", "asc"],
-            QueryParameter(description="Order by descending or ascending"),
+            QueryParameter(description="Sort by created_at"),
         ] = "desc",
     ) -> EventsWithTotal:
         result, total = await repo.get_paginated_events_by_type_with_total(type, limit_offset, order)
-
-        if not result:
-            raise NotFoundException(detail=f"Events not found for {type.value}")
-
         return EventsWithTotal(total=total, events=[Event.model_validate(obj) for obj in result])
 
     @get(
         "/{type:str}/most-recent",
-        summary="Get most recent event by type",
+        summary="Most recent event of this type",
         raises=[NotFoundException],
     )
     async def get_most_recent_event_by_type(

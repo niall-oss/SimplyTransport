@@ -1,6 +1,6 @@
 from pydantic import Field
 from SimplyTransport.api_contracts.base_contracts import ApiBaseModel
-from SimplyTransport.domain.enums import Direction
+from SimplyTransport.api_contracts.enums import DirectionField
 
 
 class Trip(ApiBaseModel):
@@ -10,7 +10,9 @@ class Trip(ApiBaseModel):
     shape_id: str
     headsign: str | None
     short_name: str | None
-    direction: Direction = Field(description="Direction of travel. Mapping between agencies could differ.")
+    direction: DirectionField = Field(
+        description="Direction of travel. Agencies do not always use OUTBOUND and INBOUND the same way.",
+    )
     block_id: str | None
     dataset: str
 
