@@ -5,25 +5,32 @@ on:
     branches: ["*"]
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
 jobs:
   Run_ruff:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: 3.14.3
-          cache: "pip"
+          python-version: "3.14.3"
+          activate-environment: true
 
-      - name: Install dependencies
-        run: pip install ruff==0.15.8
+      - name: Install ruff
+        run: uv pip install ruff==0.16.5
 
       - name: Verify pyproject.toml
         run: |
@@ -52,7 +59,7 @@ jobs:
 
       - name: Push changes
         if: steps.git-check.outputs.modified == 'true'
-        uses: EndBug/add-and-commit@v9
+        uses: EndBug/add-and-commit@v11
         with:
           author_name: ${{ github.actor }}
           author_email: ${{ github.actor }}@users.noreply.github.com

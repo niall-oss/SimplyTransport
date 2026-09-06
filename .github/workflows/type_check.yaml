@@ -7,6 +7,13 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   type_check:
     name: Pyright Type Check
@@ -14,16 +21,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event.pull_request.head.ref || github.head_ref || github.ref }}
-          fetch-depth: 0
+        uses: actions/checkout@v7
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: 3.14.3
+          python-version: "3.14.3"
+          activate-environment: true
 
       - name: Install dependencies
         run: |
@@ -31,16 +35,7 @@ jobs:
           uv pip install -r requirements-dev.txt
 
       - name: Install pyright
-        run: uv pip install pyright==1.1.408
-
-      - name: Create pyright CI config
-        run: |
-          echo '{
-            "include": ["SimplyTransport", "tests"],
-            "exclude": ["**/node_modules", "**/__pycache__"],
-            "typeCheckingMode": "basic",
-            "pythonVersion": "3.14.3"
-          }' > pyrightconfig.json
+        run: uv pip install pyright==1.1.411
 
       - name: Run Pyright type checking
         run: pyright

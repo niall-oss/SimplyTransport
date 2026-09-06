@@ -594,9 +594,7 @@ ruff check --fix .
 
 ### Pyright - Type checking
 
-Pyright is a static type checker for Python. It is not yet enforced in the CI pipeline as the project is not yet fully typed.
-
-It is currently set to basic but the goal is to get it to strict.
+Pyright is a static type checker for Python. CI runs it in basic mode on pull requests and on push to main. The project is not yet fully typed; the goal is to get it to strict.
 
 You can run Pyright manually using the following command:
 

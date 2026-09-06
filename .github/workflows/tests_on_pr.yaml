@@ -5,13 +5,18 @@ on:
     branches: ["*"]
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test:
     name: Run tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.14.3"]
 
     env:
       ENVIRONMENT: TEST
@@ -19,16 +24,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
+        uses: actions/checkout@v7
 
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.14.3"
+          activate-environment: true
 
       - name: Install dependencies
         run: uv pip install -r requirements-top-level.txt
@@ -39,11 +41,70 @@ jobs:
       - name: Run tests with coverage
         run: coverage run --branch -m pytest
 
-      - name: Create coverage reports
-        run: coverage html --show-contexts && coverage xml
+      - name: Print coverage summary
+        if: ${{ !cancelled() }}
+        run: coverage report
+
+      - name: Create HTML coverage report
+        if: ${{ !cancelled() }}
+        run: coverage html --show-contexts
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: htmlcov/
+
+      - name: Update PR description with coverage
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python << 'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          pr = os.environ["PR_NUMBER"]
+          run_id = os.environ["RUN_ID"]
+          repo = os.environ["REPO"]
+
+          markdown = subprocess.check_output(
+              ["coverage", "report", "--format=markdown"],
+              text=True,
+          ).strip()
+          artifact_url = f"https://github.com/{repo}/actions/runs/{run_id}"
+
+          start = "<!-- coverage-ci-start -->"
+          end = "<!-- coverage-ci-end -->"
+          block = (
+              f"{start}\n"
+              "## Coverage\n\n"
+              f"{markdown}\n\n"
+              f"HTML report: [coverage-report artifact]({artifact_url})\n"
+              f"{end}"
+          )
+
+          body = subprocess.check_output(
+              ["gh", "pr", "view", pr, "--json", "body", "-q", ".body // \"\""],
+              text=True,
+          )
+          if body in ("null",):
+              body = ""
+          body = body.rstrip("\n")
+
+          if start in body and end in body:
+              before, rest = body.split(start, 1)
+              _, after = rest.split(end, 1)
+              new_body = before + block + after
+          else:
+              new_body = (body + "\n\n" if body else "") + block + "\n"
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "pr-body.md"
+          path.write_text(new_body, encoding="utf-8")
+          subprocess.check_call(["gh", "pr", "edit", pr, "--body-file", str(path)])
+          PY
