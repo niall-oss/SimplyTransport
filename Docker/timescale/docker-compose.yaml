@@ -10,6 +10,17 @@ services:
       - POSTGRES_USER=${TIMESCALE_USER}
       - POSTGRES_PASSWORD=${TIMESCALE_PASSWORD}
       - POSTGRES_DB=${TIMESCALE_DB}
+    healthcheck:
+      # Timescale restarts Postgres after first init; pg_isready alone is too early.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" && psql -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -c 'SELECT 1'",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
     restart: unless-stopped
     networks:
       - simplytransport-network

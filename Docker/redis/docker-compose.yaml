@@ -9,6 +9,15 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD}
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG",
+        ]
+      interval: 1s
+      timeout: 2s
+      retries: 20
     restart: unless-stopped
     networks:
       - simplytransport-network

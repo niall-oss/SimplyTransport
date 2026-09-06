@@ -5,6 +5,13 @@ on:
     branches: ["*"]
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   docker-test:
     name: Test Docker Configuration
@@ -12,42 +19,43 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
+        uses: actions/checkout@v7
 
       - name: Create env file
         run: |
           cat << EOF > .env
           ENVIRONMENT=PR-TEST-CI
+          LOG_LEVEL=INFO
 
           # Database
-          DB_URL=postgresql+asyncpg://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/postgres
+          DB_URL=postgresql+asyncpg://example:example@postgres:5432/example
           DB_ECHO=false
-          TIMESCALE_URL=postgresql+asyncpg://${{ secrets.TIMESCALE_USER }}:${{ secrets.TIMESCALE_PASSWORD }}@timescale:5432/postgres
+          TIMESCALE_URL=postgresql+asyncpg://example:example@timescale:5432/example
 
           # Postgres Docker
-          POSTGRES_DB=postgres
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=example
+          POSTGRES_USER=example
+          POSTGRES_PASSWORD=example
 
           # Timescale Docker
-          TIMESCALE_DB=postgres
-          TIMESCALE_USER=${{ secrets.TIMESCALE_USER }}
-          TIMESCALE_PASSWORD=${{ secrets.TIMESCALE_PASSWORD }}
+          TIMESCALE_DB=example
+          TIMESCALE_USER=example
+          TIMESCALE_PASSWORD=example
 
           # Redis
-          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          REDIS_PASSWORD=example
           REDIS_PORT=6379
+
+          # GTFS placeholders (compose interpolates these; CI does not fetch live feeds)
+          GTFS_TFI_REALTIME_URL=example
+          GTFS_TFI_REALTIME_VEHICLES_URL=example
+          GTFS_TFI_API_KEY_1=example
+          GTFS_TFI_API_KEY_2=example
+          GTFS_TFI_DATASET=TFI
           EOF
 
       - name: Build and start services
-        run: docker compose -f docker-compose.prod.yaml up -d --build
-
-      - name: Wait 5 seconds for containers to start
-        run: sleep 5
+        run: docker compose -f docker-compose.prod.yaml up -d --build --wait --wait-timeout 120
 
       - name: Check service status
         run: |
@@ -56,32 +64,16 @@ jobs:
           docker logs simplytransport
 
           echo "Testing PostgreSQL connection..."
-          docker exec postgres pg_isready -U ${{ secrets.POSTGRES_USER }}
-          if [ $? -ne 0 ]; then
-            echo "PostgreSQL connection failed"
-            exit 1
-          fi
+          docker exec postgres pg_isready -U example
 
           echo "Testing Redis connection... expect pong response"
-          docker exec redis redis-cli -a ${{ secrets.REDIS_PASSWORD }} ping
-          if [ $? -ne 0 ]; then
-            echo "Redis connection failed"
-            exit 1
-          fi
+          docker exec redis redis-cli -a example ping
 
           echo "Testing TimescaleDB connection..."
-          docker exec timescale pg_isready -U ${{ secrets.TIMESCALE_USER }}
-          if [ $? -ne 0 ]; then
-            echo "TimescaleDB connection failed"
-            exit 1
-          fi
+          docker exec timescale pg_isready -U example
 
           echo "Testing application health..."
-          curl -f http://localhost:8000/healthcheck || exit 1
-          if [ $? -ne 0 ]; then
-            echo "Application health check failed"
-            exit 1
-          fi
+          curl -f http://localhost:8000/healthcheck
 
       - name: Show logs on failure
         if: failure()
