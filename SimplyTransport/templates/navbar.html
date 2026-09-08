@@ -1,3 +1,4 @@
+{% set path = request.url.path %}
 <nav class="navbar">
     <div class="container">
         <div class="navbar-flex">
@@ -5,7 +6,7 @@
                 <div class="navbar-head">
                     <div class="nav-logo">
                         <img src="/static/simply_transport_logo.svg"
-                             alt="logo"
+                             alt="SimplyTransport"
                              width="32"
                              height="32">
                     </div>
@@ -14,77 +15,58 @@
                 </div>
             </a>
             <div class="navbar-item">
-                <a href="/stops" style="text-decoration:none;">
-                    <button class="nav-button">
-                        <div class="nav-search-logo">
-                            <img src="/static/search_icon.svg" alt="search" width="100%" height="100%">
-                        </div>
-                        <span>Stops</span>
-                    </button>
+                <a class="nav-button{% if path == '/stops' or path.startswith('/realtime/stop') or path.startswith('/search/stops') %} nav-button-active{% endif %}"
+                   href="/stops">
+                    <div class="nav-search-logo">
+                        <img src="/static/search_icon.svg" alt="" width="100%" height="100%">
+                    </div>
+                    <span>Stops</span>
                 </a>
             </div>
             <div class="navbar-item">
-                <a href="/routes" style="text-decoration:none;">
-                    <button class="nav-button">
-                        <div class="nav-search-logo">
-                            <img src="/static/search_icon.svg" alt="search" width="100%" height="100%">
-                        </div>
-                        <span>Routes</span>
-                    </button>
+                <a class="nav-button{% if path == '/routes' or path.startswith('/realtime/route') or path.startswith('/search/routes') %} nav-button-active{% endif %}"
+                   href="/routes">
+                    <div class="nav-search-logo">
+                        <img src="/static/search_icon.svg" alt="" width="100%" height="100%">
+                    </div>
+                    <span>Routes</span>
                 </a>
             </div>
             <div class="navbar-segment">
                 <div class="navbar-item nav-dropdown">
-                    <a href="/maps">
-                        <button class="nav-link">
-                            <span class="nav-link-text">Maps</span>
-                        </button>
-                    </a>
+                    <a class="nav-link{% if path.startswith('/maps') %} nav-link-active{% endif %}"
+                       href="/maps">Maps</a>
                 </div>
                 <div class="navbar-item nav-dropdown">
-                    <a href="/stats">
-                        <button class="nav-link">
-                            <span class="nav-link-text">Stats</span>
-                        </button>
-                    </a>
+                    <a class="nav-link{% if path.startswith('/stats') %} nav-link-active{% endif %}"
+                       href="/stats">Stats</a>
                 </div>
                 <div class="navbar-item nav-dropdown">
-                    <a href="/apidocs">
-                        <button class="nav-link">
-                            <span class="nav-link-text">Api Docs</span>
-                        </button>
-                    </a>
+                    <a class="nav-link{% if path.startswith('/apidocs') %} nav-link-active{% endif %}"
+                       href="/apidocs">API docs</a>
                 </div>
                 <div class="navbar-item nav-dropdown">
-                    <a href="/events">
-                        <button class="nav-link">
-                            <span class="nav-link-text">Events</span>
-                        </button>
-                    </a>
+                    <a class="nav-link{% if path.startswith('/events') %} nav-link-active{% endif %}"
+                       href="/events">Events</a>
                 </div>
                 <div class="navbar-item nav-dropdown">
-                    <a href="/delays-explained">
-                        <button class="nav-link">
-                            <span class="nav-link-text">Delays</span>
-                        </button>
-                    </a>
+                    <a class="nav-link{% if path.startswith('/delays') %} nav-link-active{% endif %}"
+                       href="/delays-explained">Delays</a>
                 </div>
                 <div class="navbar-item nav-dropdown">
-                    <a href="/about">
-                        <button class="nav-link">
-                            <span class="nav-link-text">About</span>
-                        </button>
-                    </a>
+                    <a class="nav-link{% if path == '/about' %} nav-link-active{% endif %}"
+                       href="/about">About</a>
                 </div>
             </div>
         </div>
-        <div class="nav-dropdown-logo" id="nav-dropdown-button">
-            <img src="/static/down-arrow.svg"
-                 onclick="toggleDropdown()"
-                 alt="search"
-                 width="100%"
-                 height="100%">
-        </div>
+        <button type="button"
+                class="nav-dropdown-logo"
+                id="nav-dropdown-button"
+                aria-label="More pages"
+                aria-expanded="false"
+                onclick="toggleDropdown()">
+            <img src="/static/down-arrow.svg" alt="" width="100%" height="100%">
+        </button>
     </div>
 </nav>
 <script>
@@ -95,5 +77,6 @@
             dropdownContent[i].classList.toggle('show');
         }
         dropdownButton.classList.toggle('rotate');
+        dropdownButton.setAttribute('aria-expanded', dropdownButton.classList.contains('rotate'));
     }
 </script>

@@ -10,18 +10,20 @@
             <div class="dot-flashing"></div>
         </h1>
         <p class="dense-text">
-            Searches <span class="code-highlight">names</span> \ <span class="code-highlight">codes</span> where either start with your search term
+            Matches <span class="code-highlight">names</span> or <span class="code-highlight">codes</span> that start with your search term
         </p>
         <div class="inner-container search-results-stack">
             <div class="input-with-loader">
+                <label class="visually-hidden" for="stop-search">Search stops</label>
                 <input class="search-box"
+                       id="stop-search"
                        hx-get="/search/stops?pageSize=20"
                        hx-trigger="keyup[target.value.length > 0] changed delay:200ms, search"
                        hx-target="#stop-search-results"
                        hx-swap="innerhtml transition:true"
                        type="search"
                        name="search"
-                       placeholder="Search..."
+                       placeholder="Search stops..."
                        hx-indicator=".htmx-indicator">
                 <span class="htmx-indicator">
                     <img class="loader-svg"

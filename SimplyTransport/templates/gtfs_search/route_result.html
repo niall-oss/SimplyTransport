@@ -12,7 +12,11 @@
                     hx-trigger="click"
                     hx-target="body"
                     hx-push-url="/realtime/route/{{ route.id }}/INBOUND">
-                    <td class="dense-text">{{ route.short_name }}</td>
+                    <td class="dense-text">
+                        <a class="row-link"
+                           href="/realtime/route/{{ route.id }}/INBOUND"
+                           onclick="event.stopPropagation()">{{ route.short_name }}</a>
+                    </td>
                     <td class="dense-text">{{ route.long_name }}</td>
                 </tr>
             {% endfor %}

@@ -11,18 +11,14 @@
             <h2>No number available</h2>
         {% endif %}
         <div class="flex-gap">
-            <a class="no-underline"
+            <a class="no-line-break route-link-button dense-text"
                href="https://www.google.com/maps?layer=c&amp;cbll={{ stop.lat }},{{ stop.lon }}&amp;cbp=0,0,,,"
                target="_blank"
-               rel="noopener noreferrer">
-                <button class="no-line-break route-link-button dense-text">Street View</button>
-            </a>
-            <a class="no-underline"
+               rel="noopener noreferrer">Street View</a>
+            <a class="no-line-break route-link-button dense-text"
                href="https://www.google.com/maps/dir/?api=1&destination={{ stop.lat }},{{ stop.lon }}"
                target="_blank"
-               rel="noopener noreferrer">
-                <button class="no-line-break route-link-button dense-text">Google Maps Directions</button>
-            </a>
+               rel="noopener noreferrer">Google Maps Directions</a>
         </div>
         <div class="inner-container">
             <h3 class="h3-table">Realtime:</h3>
@@ -71,6 +67,7 @@
                     </select>
                 </div>
                 <div class="bottom-margin">
+                    <label class="visually-hidden" for="search-box-2">Filter by route</label>
                     <input class="search-box" id="search-box-2" placeholder="Filter by route...">
                 </div>
                 <div id="schedule-table">

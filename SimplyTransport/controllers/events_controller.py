@@ -10,14 +10,12 @@ from litestar.params import QueryParameter
 from litestar.response import Template
 
 from ..domain.events.event_repo import EventRepo, provide_event_repo
-from ..domain.events.event_types import EventType
+from ..domain.events.event_types import ALL_EVENTS, EVENT_TYPE_LABELS, EventType, event_type_label
 from ..lib.parameters.pagination_page_numbers import generate_pagination_pages
 
 __all__ = [
     "EventsController",
 ]
-
-ALL_EVENTS = "all.event.types"
 
 
 class EventsController(Controller):
@@ -27,8 +25,11 @@ class EventsController(Controller):
 
     @get("/")
     async def root(self) -> Template:
-        event_types = [event_type.value for event_type in EventType.__members__.values()]
-        event_types.insert(0, ALL_EVENTS)
+        event_types = [(ALL_EVENTS, event_type_label(ALL_EVENTS))]
+        event_types.extend(
+            (event_type.value, event_type_label(event_type.value))
+            for event_type in EventType.__members__.values()
+        )
 
         return Template(template_name="events/events_main.html", context={"event_types": event_types})
 
@@ -74,7 +75,10 @@ class EventsController(Controller):
             context={
                 "events": events,
                 "search_type": search_type,
+                "search_type_label": event_type_label(search_type),
                 "sort": sort,
+                "sort_label": "Newest first" if sort == "desc" else "Oldest first",
+                "event_type_labels": EVENT_TYPE_LABELS,
                 "limit": limit_offset.limit,
                 "current_page": current_page,
                 "total_pages": total_pages,

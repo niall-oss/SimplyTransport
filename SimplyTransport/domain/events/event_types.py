@@ -1,5 +1,23 @@
 from enum import StrEnum
 
+ALL_EVENTS = "all.event.types"
+
+EVENT_TYPE_LABELS: dict[str, str] = {
+    ALL_EVENTS: "All event types",
+    "gtfs.database.updated": "GTFS updated",
+    "realtime.database.updated": "Realtime updated",
+    "realtime_vehicles.database.updated": "Vehicle positions updated",
+    "stop_features.database.updated": "Stop features updated",
+    "database_statistics.updated": "Statistics updated",
+    "cleanup.events.deleted": "Events cleaned up",
+    "cleanup.delays.deleted": "Delays cleaned up",
+    "timeseries.delays.recorded": "Delays recorded",
+}
+
+
+def event_type_label(value: str) -> str:
+    return EVENT_TYPE_LABELS.get(value, value)
+
 
 class EventType(StrEnum):
     # Type of event, should be less than 255 chars long

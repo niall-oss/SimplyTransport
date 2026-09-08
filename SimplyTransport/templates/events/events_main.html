@@ -19,18 +19,21 @@
                     hx-swap="transition:true"
                     hx-include="[name='search_type'],[name='sort'],[name='pageSize']"
                     class="pagination-button">Reload</button>
-            <select class="dropdown" name="search_type">
-                {% for event in event_types %}<option value="{{ event }}">{{ event }}</option>{% endfor %}
+            <label class="visually-hidden" for="event-search-type">Event type</label>
+            <select class="dropdown" id="event-search-type" name="search_type">
+                {% for value, label in event_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
             </select>
-            <select class="dropdown" name="sort">
-                <option value="desc">Desc</option>
-                <option value="asc">Asc</option>
+            <label class="visually-hidden" for="event-sort">Sort order</label>
+            <select class="dropdown" id="event-sort" name="sort">
+                <option value="desc">Newest first</option>
+                <option value="asc">Oldest first</option>
             </select>
-            <select class="dropdown" name="pageSize">
-                <option value="10">PageSize : 10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
+            <label class="visually-hidden" for="event-page-size">Page size</label>
+            <select class="dropdown" id="event-page-size" name="pageSize">
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
             </select>
         </div>
         <div class="events-container" id="events-container"></div>
