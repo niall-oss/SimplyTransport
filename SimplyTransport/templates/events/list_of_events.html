@@ -1,29 +1,25 @@
 <style>
-/* Brackets */
 .hljs-punctuation {
-    color: var(--font-color-secondary)
-}
-
-/* Strings */
-.hljs-string {
-    color: var(--font-color-secondary)
-}
-
-/* Numbers */
-.hljs-number {
     color: var(--font-color-secondary);
-    font-weight: 700
 }
 
-/* Keys */
+.hljs-string {
+    color: var(--font-color);
+}
+
+.hljs-number {
+    color: var(--font-color);
+    font-weight: 700;
+}
+
 .hljs-attr {
-    color: var(--font-color-highlight-light)
+    color: var(--font-color-highlight-light);
 }
 </style>
 {% if events %}
     <div class="single-event">
         <div class="event-chip-holder">
-            <span class="event-chip">{{ search_type }}</span> <span class="event-chip">{{ sort }}</span>
+            <span class="event-chip">{{ search_type_label }}</span> <span class="event-chip">{{ sort_label }}</span>
         </div>
         <div class="pagination-total">
             <div class="pagination-pages flex-start">
@@ -50,7 +46,7 @@
     {% for event in events %}
         <div class="single-event">
             <div class="event-chip-holder">
-                <span class="event-chip">{{ event.created_at_pretty }}</span><span class="event-chip">{{ event.event_type }}</span>
+                <span class="event-chip">{{ event.created_at_pretty }}</span><span class="event-chip">{{ event_type_labels.get(event.event_type, event.event_type) }}</span>
             </div>
             <pre class="event-code"><code class="language-json">{{ event.to_json() }}</code></pre>
         </div>

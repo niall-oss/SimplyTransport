@@ -1,7 +1,8 @@
 <div class="flex-separate table-search-top-text-pad">
-    <span class="dense-text">Showing <span class="word-highlight">{{ start_time_difference }}</span> and <span class="word-highlight">+{{ end_time_difference }}</span> mins</span><span class="code-highlight">{{ current_time.strftime("%H:%M:%S") }}</span>
+    <span class="dense-text">Arrivals from <span class="word-highlight">{{ start_time_difference | abs }}</span> minutes ago to <span class="word-highlight">{{ end_time_difference }}</span> minutes ahead</span><span class="code-highlight">{{ current_time.strftime("%H:%M:%S") }}</span>
 </div>
 <div class="bottom-margin">
+    <label class="visually-hidden" for="search-box-1">Filter by route</label>
     <input class="search-box" id="search-box-1" placeholder="Filter by route...">
 </div>
 <table class="table-search" id="table-1" aria-label="Realtime">

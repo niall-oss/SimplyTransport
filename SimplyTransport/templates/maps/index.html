@@ -15,10 +15,8 @@
             </p>
             <div class="flex-gap">
                 {% for agency in agencies %}
-                    <a style="text-decoration: none"
-                       href="/maps/agency/route/{{ agency.id }}">
-                        <button class="no-line-break route-link-button dense-text">{{ agency.short_name() }}</button>
-                    </a>
+                    <a class="no-line-break route-link-button dense-text"
+                       href="/maps/agency/route/{{ agency.id }}">{{ agency.short_name() }}</a>
                 {% endfor %}
             </div>
         </div>
@@ -27,9 +25,8 @@
             <p class="dense-text">Maps of collections of stops.</p>
             <div class="flex-gap">
                 {% for map in map_types %}
-                    <a style="text-decoration: none" href="/maps/stop/{{ map.value }}">
-                        <button class="no-line-break route-link-button dense-text">{{ map.label }}</button>
-                    </a>
+                    <a class="no-line-break route-link-button dense-text"
+                       href="/maps/stop/{{ map.value }}">{{ map.label }}</a>
                 {% endfor %}
             </div>
         </div>

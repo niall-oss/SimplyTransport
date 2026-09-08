@@ -12,7 +12,11 @@
                     hx-trigger="click"
                     hx-target="body"
                     hx-replace-url="/realtime/stop/{{ stop.id }}">
-                    <td class="dense-text">{{ stop.name }}</td>
+                    <td class="dense-text">
+                        <a class="row-link"
+                           href="/realtime/stop/{{ stop.id }}"
+                           onclick="event.stopPropagation()">{{ stop.name }}</a>
+                    </td>
                     <td class="dense-text">{{ stop.code }}</td>
                 </tr>
             {% endfor %}

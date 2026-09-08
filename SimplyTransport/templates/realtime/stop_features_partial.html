@@ -10,65 +10,53 @@
                     <span>🚏 General 🚏</span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>☘️ {{ stop.stop_feature.pretty_string("stop_name_ie") }}</span>
+                    <span>☘️ <span class="stop-feature-value">{{ stop.stop_feature.pretty_string("stop_name_ie") }}</span></span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>⌚ Realtime Display:
-                        {% if stop.stop_feature.rtpi_active %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span>⌚ <span class="stop-feature-key">Realtime Display:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.rtpi_active %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>⛺ Bus Shelter:
-                        {% if stop.stop_feature.shelter_active %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span>⛺ <span class="stop-feature-key">Bus Shelter:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.shelter_active %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>🚏 Bus Pole:
-                        {% if stop.stop_feature.pole_active %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span>🚏 <span class="stop-feature-key">Bus Pole:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.pole_active %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
             </div>
             <div class="flex-column-gap stop-feature-container">
                 <div class="stop-feature-header dense-text">
-                    <span>♿ Accessability ♿</span>
+                    <span>♿ Accessibility ♿</span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>🚏 Wheelchair Accessible:
-                        {% if stop.stop_feature.wheelchair_accessability %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span>🚏 <span class="stop-feature-key">Wheelchair Accessible:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.wheelchair_accessability %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Kassel Kurb:
-                        {% if stop.stop_feature.castle_kerbing %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span><span class="stop-feature-key">Kassel kerb:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.castle_kerbing %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Step up:
-                        {% if stop.stop_feature.step_at_stop %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span><span class="stop-feature-key">Step up:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.step_at_stop %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
             </div>
@@ -77,34 +65,29 @@
                     <span>🚮 Facilities 🚮</span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>🪑 Bench:
-                        {% if stop.stop_feature.bench %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span>🪑 <span class="stop-feature-key">Bench:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.bench %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>🗑 Bin:
-                        {% if stop.stop_feature.bin %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span>🗑 <span class="stop-feature-key">Bin:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.bin %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Footpath:
-                        {% if stop.stop_feature.footpath_to_stop %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span><span class="stop-feature-key">Footpath:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.footpath_to_stop %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Number of bays: {{ stop.stop_feature.pretty_string("bays") }}</span>
+                    <span><span class="stop-feature-key">Number of bays:</span>
+                        <span class="stop-feature-value">{{ stop.stop_feature.pretty_string("bays") }}</span></span>
                 </div>
             </div>
             <div class="flex-column-gap stop-feature-container">
@@ -112,30 +95,24 @@
                     <span>🚲 Bikes 🚲</span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Bike stand:
-                        {% if stop.stop_feature.bike_stand %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span><span class="stop-feature-key">Bike stand:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.bike_stand %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Bike Lane Front:
-                        {% if stop.stop_feature.bike_lane_front %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span><span class="stop-feature-key">Bike Lane Front:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.bike_lane_front %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Bike Lane Rear:
-                        {% if stop.stop_feature.bike_lane_rear %}
-                            ✅
-                        {% else %}
-                            ❌
-                        {% endif %}
+                    <span><span class="stop-feature-key">Bike Lane Rear:</span>
+                        <span class="stop-feature-value">
+                            {% if stop.stop_feature.bike_lane_rear %}Yes{% else %}No{% endif %}
+                        </span>
                     </span>
                 </div>
             </div>
@@ -144,25 +121,27 @@
                     <span>🕒 Last Surveyed 🕒</span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Realtime: {{ stop.stop_feature.pretty_string("last_updated_rtpi") }}</span>
+                    <span><span class="stop-feature-key">Realtime:</span>
+                        <span class="stop-feature-value">{{ stop.stop_feature.pretty_string("last_updated_rtpi") }}</span></span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Shelter: {{ stop.stop_feature.pretty_string("last_updated_shelter") }}</span>
+                    <span><span class="stop-feature-key">Shelter:</span>
+                        <span class="stop-feature-value">{{ stop.stop_feature.pretty_string("last_updated_shelter") }}</span></span>
                 </div>
                 <div class="stop-feature-content dense-text">
-                    <span>Pole: {{ stop.stop_feature.pretty_string("last_updated_pole") }}</span>
+                    <span><span class="stop-feature-key">Pole:</span>
+                        <span class="stop-feature-value">{{ stop.stop_feature.pretty_string("last_updated_pole") }}</span></span>
                 </div>
             </div>
         {% else %}
-            <h3>No information available</h3>
+            <p class="dense-text">No information available</p>
         {% endif %}
     </div>
     <div class="flex-gap">
-        <a style="text-decoration: none"
+        <a class="no-line-break route-link-button dense-text"
            href="https://data.gov.ie/dataset/70c5967e-4df7-4dc8-82bb-c7e2b0e00888/resource/46702e02-79ac-456b-a3a9-d6cbd3c04abb/download/ptimsglossary.pdf"
-           target="_blank">
-            <button class="no-line-break route-link-button dense-text">Glossary</button>
-        </a>
+           target="_blank"
+           rel="noopener noreferrer">Glossary</a>
     </div>
 </div>
 {% include "widgets/toggle_visibility.html" %}

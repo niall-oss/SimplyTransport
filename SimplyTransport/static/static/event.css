@@ -10,28 +10,12 @@
 	overflow-x: auto;
 	margin: 0;
 	background-color: var(--bg-color-bump);
-	letter-spacing: 0.07rem;
+	letter-spacing: 0.02rem;
 	color: var(--font-color-secondary);
 	line-height: 1.5rem;
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
-}
-
-.event-chip {
-	display: inline-block;
-	padding: 0.5rem 1rem;
-	border-radius: 99999px;
-	background-color: var(--bg-color-highlight);
-	color: var(--font-color-secondary);
-	font-size: 0.9rem;
-	line-height: 0.9rem;
-}
-
-.event-chip-holder {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.7rem;
 }
 
 .event-code {
@@ -41,15 +25,5 @@
 @media screen and (max-width: 750px) {
 	.single-event {
 		font-size: 0.9rem;
-	}
-
-	.event-chip {
-		font-size: 0.85rem;
-		line-height: 0.85rem;
-		padding: 0.4rem 0.9rem;
-	}
-
-	.event-chip-holder {
-		gap: 0.6rem;
 	}
 }

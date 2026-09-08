@@ -1,25 +1,23 @@
-<div class="inner-container">
-    <h3 class="h3-table">Current Static Database Statistics</h3>
-    <table class="table-search table-sortable"
-           aria-label="Static Database Statistics">
-        <thead class="hoverable">
+<h3 class="h3-table">Current Static Database Statistics</h3>
+<table class="table-search table-sortable table-search--static-head"
+       aria-label="Static Database Statistics">
+    <thead class="hoverable">
+        <tr>
+            <th class="dense-text">Name</th>
+            <th class="dense-text">Total Entries</th>
+            <th class="dense-text" data-type="number">Percentage</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value, percentage in stats_with_percentages %}
             <tr>
-                <th class="dense-text">Name</th>
-                <th class="dense-text">Total Entries</th>
-                <th class="dense-text" data-type="number">Percentage</th>
+                <td class="dense-text no-pointer">{{ key }}</td>
+                <td class="dense-text no-pointer">{{ value }}</td>
+                <td class="dense-text no-pointer">{{ percentage }}%</td>
             </tr>
-        </thead>
-        <tbody>
-            {% for key, value, percentage in stats_with_percentages %}
-                <tr>
-                    <td class="dense-text no-pointer">{{ key }}</td>
-                    <td class="dense-text no-pointer">{{ value }}</td>
-                    <td class="dense-text no-pointer">{{ percentage }}%</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        {% endfor %}
+    </tbody>
+</table>
 <script>
 document.querySelectorAll(".table-sortable th").forEach((headerCell) => {
   headerCell.addEventListener("click", () => {

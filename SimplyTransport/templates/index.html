@@ -6,73 +6,83 @@
     <div class="narrow-container">
         <h1>Welcome to SimplyTransport</h1>
         <p class="dense-text">
-            SimplyTransport is the one-stop solution for navigating Ireland's public transportation system.
+            Irish public transport times, maps, and schedules. Dublin Bus, Go-Ahead, Bus Éireann, Irish Rail, and Luas.
         </p>
         <p class="dense-text">
-            Access vital transit information for Dublin Bus, Go-Ahead, Bus Éireann, Irish Rail, and Luas.
-            SimplyTransport provides a simple, intuitive interface to quickly get the latest information on transport services.
+            Read the <a class="link-style" href="/about">about page</a> for how the project works.
         </p>
         <p class="dense-text">
-            Read more about SimplyTransport <a class="link-style" href="/about">here</a>.
+            Try <a class="link-style" href="/realtime/stop/8220DB001359">College Green on Dame Street</a>.
         </p>
-        <p class="dense-text">
-            Have a look <a class="link-style" href="/realtime/stop/8220DB001359">at a stop on dame street</a> as an example!
-        </p>
+        <div class="flex-gap bottom-margin">
+            <a class="route-link-button dense-text" href="/stops">Stops</a>
+            <a class="route-link-button dense-text" href="/routes">Routes</a>
+        </div>
         <div class="inner-container">
             <h2 class="no-top-margin">Datasets</h2>
             <div class="data-updates">
-                <div class="dense-text bold-highlight">Dataset</div>
-                <div class="dense-text bold-highlight">Last Updated</div>
-                <div class="dense-text bold-highlight">Expected Frequency</div>
-                <div class="dense-text">Realtime Updates</div>
-                <div class="dense-text">
-                    {% if realtime_updated %}
-                        {{ realtime_updated.created_at_pretty }}
-                    {% else %}
-                        Unknown
-                    {% endif %}
+                <div class="data-updates-head dense-text bold-highlight">Dataset</div>
+                <div class="data-updates-head dense-text bold-highlight">Last Updated</div>
+                <div class="data-updates-head dense-text bold-highlight">Expected Frequency</div>
+                <div class="data-updates-row">
+                    <div class="dense-text">Realtime Updates</div>
+                    <div class="dense-text">
+                        {% if realtime_updated %}
+                            {{ realtime_updated.created_at_pretty }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </div>
+                    <div class="dense-text">Every minute</div>
                 </div>
-                <div class="dense-text">Every minute</div>
-                <div class="dense-text">Vehicle Positions</div>
-                <div class="dense-text">
-                    {% if vehicles_updated %}
-                        {{ vehicles_updated.created_at_pretty }}
-                    {% else %}
-                        Unknown
-                    {% endif %}
+                <div class="data-updates-row">
+                    <div class="dense-text">Vehicle Positions</div>
+                    <div class="dense-text">
+                        {% if vehicles_updated %}
+                            {{ vehicles_updated.created_at_pretty }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </div>
+                    <div class="dense-text">Every minute</div>
                 </div>
-                <div class="dense-text">Every minute</div>
-                <div class="dense-text">Recording Delays</div>
-                <div class="dense-text">
-                    {% if delays_recorded %}
-                        {{ delays_recorded.created_at_pretty }}
-                    {% else %}
-                        Unknown
-                    {% endif %}
+                <div class="data-updates-row">
+                    <div class="dense-text">Recording Delays</div>
+                    <div class="dense-text">
+                        {% if delays_recorded %}
+                            {{ delays_recorded.created_at_pretty }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </div>
+                    <div class="dense-text">Every minute</div>
                 </div>
-                <div class="dense-text">Every minute</div>
-                <div class="dense-text">GTFS Static Schedules</div>
-                <div class="dense-text">
-                    {% if gtfs_updated %}
-                        {{ gtfs_updated.created_at_pretty }}
-                    {% else %}
-                        Unknown
-                    {% endif %}
+                <div class="data-updates-row">
+                    <div class="dense-text">GTFS Static Schedules</div>
+                    <div class="dense-text">
+                        {% if gtfs_updated %}
+                            {{ gtfs_updated.created_at_pretty }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </div>
+                    <div class="dense-text">Nightly (if needed)</div>
                 </div>
-                <div class="dense-text">Nightly (if needed)</div>
-                <div class="dense-text">Stop Features</div>
-                <div class="dense-text">
-                    {% if stop_features_updated %}
-                        {{ stop_features_updated.created_at_pretty }}
-                    {% else %}
-                        Unknown
-                    {% endif %}
-                </div>
-                <div class="dense-text">Nightly (if needed)</div>
-                <div class="dense-text">
-                    <a class="link-style" href="/events">Detailed</a>
+                <div class="data-updates-row">
+                    <div class="dense-text">Stop Features</div>
+                    <div class="dense-text">
+                        {% if stop_features_updated %}
+                            {{ stop_features_updated.created_at_pretty }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </div>
+                    <div class="dense-text">Nightly (if needed)</div>
                 </div>
             </div>
+            <p class="data-updates-foot dense-text">
+                <a class="link-style" href="/events">Event log</a>
+            </p>
         </div>
     </div>
 {% endblock content %}
