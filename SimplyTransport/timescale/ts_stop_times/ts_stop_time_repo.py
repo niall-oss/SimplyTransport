@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .ts_stop_time_model import TSStopTimeModel
 
 MAXIMUM_LIMIT = 180
-DELETE_OLD_DELAYS_BATCH_SIZE = 10000
 
 
 def maximum_timestamp() -> datetime:
@@ -202,35 +201,22 @@ class TSStopTimeRepo(SQLAlchemyAsyncRepository[TSStopTimeModel]):  # type: ignor
 
         return [TSStopTimeForGraph(timestamp=row[0], delay_in_seconds=row[1]) for row in rows]
 
-    async def delete_old_delays(
-        self, cutoff_time: datetime, *, batch_size: int = DELETE_OLD_DELAYS_BATCH_SIZE
-    ) -> int:
+    async def delete_old_delays(self, cutoff_time: datetime) -> int:
         """
-        Deletes old delays from the database in batches.
+        Deletes old delays from the database.
         Args:
             cutoff_time (datetime): The cutoff time for deleting delays.
-            batch_size (int): Max rows to delete per statement.
         Returns:
             int: The number of delays deleted.
         """
 
-        total_deleted = 0
-
-        while True:
-            id_batch = (
-                select(TSStopTimeModel.id).where(TSStopTimeModel.Timestamp < cutoff_time).limit(batch_size)
-            )
-            statement = delete(TSStopTimeModel).where(TSStopTimeModel.id.in_(id_batch))
-            result = cast(
-                CursorResult[Any],
-                await self.session.execute(statement),
-            )
-            await self.session.commit()
-            deleted = result.rowcount or 0
-            total_deleted += deleted
-            if deleted < batch_size:
-                break
-        return total_deleted
+        statement = delete(TSStopTimeModel).where(TSStopTimeModel.Timestamp < cutoff_time)
+        result = cast(
+            CursorResult[Any],
+            await self.session.execute(statement),
+        )
+        await self.session.commit()
+        return result.rowcount or 0
 
     async def get_delay_record_counts_for_last_n_hours(self, hours: int) -> dict[str, int | None]:
         """Returns the number of delay records for the last N hours."""
