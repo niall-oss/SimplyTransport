@@ -32,10 +32,12 @@ async def test_delete_old_delays_deletes_by_timestamp():
     assert deleted == 5
     session.execute.assert_awaited_once()
     session.commit.assert_awaited_once()
-    compiled = str(session.execute.await_args.args[0].compile())
-    assert "ts_stop_times" in compiled
-    assert "Timestamp" in compiled
-    assert "id IN" not in compiled
+    compiled = session.execute.await_args.args[0].compile()
+    sql = str(compiled)
+    assert "DELETE FROM ts_stop_times" in sql
+    assert 'ts_stop_times."Timestamp" <' in sql
+    assert "id IN" not in sql
+    assert datetime(2020, 1, 1) in compiled.params.values()
 
 
 @pytest.mark.asyncio
