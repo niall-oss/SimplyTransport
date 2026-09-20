@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Iterable, Sequence
 from datetime import datetime
@@ -94,6 +95,12 @@ class RedisService:
         keys = await self.redis.keys(pattern.value)
         if keys:
             await self.redis.delete(*keys)
+
+    async def delete_keys_by_patterns(self, *patterns: StrEnum) -> None:
+        """Delete keys matching each pattern, concurrently."""
+        if not patterns:
+            return
+        await asyncio.gather(*(self.delete_keys_by_pattern(pattern) for pattern in patterns))
 
     async def delete_key(self, key: str) -> None:
         """

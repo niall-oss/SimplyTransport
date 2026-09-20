@@ -3,11 +3,11 @@ import functools
 import json
 import os
 import time
+from enum import StrEnum
 from pathlib import Path
 
 import click
 import geojson
-import rich.progress as rp
 from litestar import Litestar
 from litestar.plugins import CLIPluginProtocol
 from rich.console import Console
@@ -23,12 +23,7 @@ from .lib.cache_keys import CacheKeys
 from .lib.concurrency import concurrency, release_lock, skip_if_lock_held, try_acquire_lock
 from .lib.db.database import async_session_factory
 from .lib.db.timescale_database import async_timescale_session_factory
-from .lib.gtfs_realtime_importers import (
-    RealTimeImporter,
-    RealTimeVehiclesImporter,
-    asyncio_gather_imports,
-    progress_columns,
-)
+from .lib.gtfs_realtime_importers import RealTimeImporter, RealTimeVehiclesImporter
 from .lib.logging.logging import provide_logger
 from .lib.realtime_seed_time_shift import shift_db_stop_times_and_patch_payload_for_now
 from .lib.stop_features_importer import StopFeaturesImporter
@@ -76,6 +71,35 @@ def make_sync(func):
             return asyncio.run(func(*args, **kwargs))
 
     return wrapper
+
+
+def resolve_realtime_cli_connection(
+    console: Console,
+    *,
+    url: str,
+    apikey: str,
+    dataset: str,
+    default_url: str,
+    default_apikey: str,
+) -> tuple[str, str, str]:
+    realtime_url = url or default_url
+    if url:
+        console.print(f"\nOverriding URL: {realtime_url}")
+
+    realtime_apikey = apikey or default_apikey
+    if apikey:
+        console.print(f"\nOverriding API key: {realtime_apikey}")
+
+    realtime_dataset = dataset or lib_settings.app.GTFS_TFI_DATASET
+    if dataset:
+        console.print(f"\nOverriding dataset: {realtime_dataset}")
+
+    return realtime_url, realtime_apikey, realtime_dataset
+
+
+async def bust_cache_patterns(*patterns: StrEnum) -> None:
+    redis_service = await provide_redis_service()
+    await redis_service.delete_keys_by_patterns(*patterns)
 
 
 class CLIPlugin(CLIPluginProtocol):
@@ -187,25 +211,14 @@ class CLIPlugin(CLIPluginProtocol):
             console = Console()
             console.print("Importing GTFS realtime data...")
 
-            from SimplyTransport.lib import settings
-
-            if url:
-                realtime_url = url
-                console.print(f"\nOverriding URL: {realtime_url}")
-            else:
-                realtime_url = settings.app.GTFS_TFI_REALTIME_URL
-
-            if apikey:
-                realtime_apikey = apikey
-                console.print(f"\nOverriding API key: {realtime_apikey}")
-            else:
-                realtime_apikey = settings.app.GTFS_TFI_API_KEY_1
-
-            if dataset:
-                realtime_dataset = dataset
-                console.print(f"\nOverriding dataset: {realtime_dataset}")
-            else:
-                realtime_dataset = settings.app.GTFS_TFI_DATASET
+            realtime_url, realtime_apikey, realtime_dataset = resolve_realtime_cli_connection(
+                console,
+                url=url,
+                apikey=apikey,
+                dataset=dataset,
+                default_url=lib_settings.app.GTFS_TFI_REALTIME_URL,
+                default_apikey=lib_settings.app.GTFS_TFI_API_KEY_1,
+            )
 
             importer = RealTimeImporter(url=realtime_url, api_key=realtime_apikey, dataset=realtime_dataset)
 
@@ -221,8 +234,7 @@ class CLIPlugin(CLIPluginProtocol):
 
             console.print(f"\n{len(data['entity'])} entities returned from API")
 
-            with rp.Progress(*progress_columns) as progress:
-                total_stop_times, total_trips = await asyncio_gather_imports(importer, data, progress)
+            total_stop_times, total_trips = await importer.import_from_payload(data)
 
             finish: float = time.perf_counter()
             attributes = {
@@ -237,15 +249,10 @@ class CLIPlugin(CLIPluginProtocol):
                 attributes,
             )
 
-            redis_service = await provide_redis_service()
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.RealTime.REALTIME_STOP_DELETE_ALL_KEY_TEMPLATE
-            )
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.RealTime.REALTIME_STOP_TABLE_DELETE_ALL_KEY_TEMPLATE
-            )
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.RealTime.REALTIME_TRIP_DELETE_ALL_KEY_TEMPLATE
+            await bust_cache_patterns(
+                CacheKeys.RealTime.REALTIME_STOP_DELETE_ALL_KEY_TEMPLATE,
+                CacheKeys.RealTime.REALTIME_STOP_TABLE_DELETE_ALL_KEY_TEMPLATE,
+                CacheKeys.RealTime.REALTIME_TRIP_DELETE_ALL_KEY_TEMPLATE,
             )
 
             console.print(f"\n[blue]Finished import in {round(finish - start, 2)} second(s)")
@@ -299,15 +306,10 @@ class CLIPlugin(CLIPluginProtocol):
                 f"{total_trips} rt_trip row(s) imported, {total_stop_times} rt_stop_time row(s) imported."
             )
 
-            redis_service = await provide_redis_service()
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.RealTime.REALTIME_STOP_DELETE_ALL_KEY_TEMPLATE
-            )
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.RealTime.REALTIME_STOP_TABLE_DELETE_ALL_KEY_TEMPLATE
-            )
-            await redis_service.delete_keys_by_pattern(
-                CacheKeys.RealTime.REALTIME_TRIP_DELETE_ALL_KEY_TEMPLATE
+            await bust_cache_patterns(
+                CacheKeys.RealTime.REALTIME_STOP_DELETE_ALL_KEY_TEMPLATE,
+                CacheKeys.RealTime.REALTIME_STOP_TABLE_DELETE_ALL_KEY_TEMPLATE,
+                CacheKeys.RealTime.REALTIME_TRIP_DELETE_ALL_KEY_TEMPLATE,
             )
 
         @cli.command(
@@ -329,25 +331,14 @@ class CLIPlugin(CLIPluginProtocol):
             console = Console()
             console.print("Importing GTFS realtime data...")
 
-            from SimplyTransport.lib import settings
-
-            if url:
-                realtime_url = url
-                console.print(f"\nOverriding URL: {realtime_url}")
-            else:
-                realtime_url = settings.app.GTFS_TFI_REALTIME_VEHICLES_URL
-
-            if apikey:
-                realtime_apikey = apikey
-                console.print(f"\nOverriding API key: {realtime_apikey}")
-            else:
-                realtime_apikey = settings.app.GTFS_TFI_API_KEY_2
-
-            if dataset:
-                realtime_dataset = dataset
-                console.print(f"\nOverriding dataset: {realtime_dataset}")
-            else:
-                realtime_dataset = settings.app.GTFS_TFI_DATASET
+            realtime_url, realtime_apikey, realtime_dataset = resolve_realtime_cli_connection(
+                console,
+                url=url,
+                apikey=apikey,
+                dataset=dataset,
+                default_url=lib_settings.app.GTFS_TFI_REALTIME_VEHICLES_URL,
+                default_apikey=lib_settings.app.GTFS_TFI_API_KEY_2,
+            )
 
             importer = RealTimeVehiclesImporter(
                 url=realtime_url, api_key=realtime_apikey, dataset=realtime_dataset
@@ -380,9 +371,10 @@ class CLIPlugin(CLIPluginProtocol):
                 attributes,
             )
 
-            redis_service = await provide_redis_service()
-            await redis_service.delete_keys_by_pattern(CacheKeys.StopMaps.STOP_MAP_DELETE_ALL_KEY_TEMPLATE)
-            await redis_service.delete_keys_by_pattern(CacheKeys.RouteMaps.ROUTE_MAP_DELETE_ALL_KEY_TEMPLATE)
+            await bust_cache_patterns(
+                CacheKeys.StopMaps.STOP_MAP_DELETE_ALL_KEY_TEMPLATE,
+                CacheKeys.RouteMaps.ROUTE_MAP_DELETE_ALL_KEY_TEMPLATE,
+            )
 
             console.print(f"\n[blue]Finished import in {round(finish - start, 2)} second(s)")
 

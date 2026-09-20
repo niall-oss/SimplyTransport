@@ -208,22 +208,20 @@ def test_skip_stop_time_import_for_removed_trips():
     assert rt._skip_stop_time_import_for_trip_relationship("SCHEDULED") is False
 
 
-@pytest.mark.asyncio
-async def test_import_stop_times_skips_cancelled_unknown_and_bad_sequence():
-    importer = rt.RealTimeImporter("", "", "TFI")
-    data = {
+def _trip_update_payload() -> dict:
+    return {
         "entity": [
             {
-                "id": "cancelled",
+                "id": "unknown-trip",
                 "trip_update": {
-                    "trip": {"trip_id": "T1", "schedule_relationship": "CANCELED"},
+                    "trip": {"trip_id": "MISSING"},
                     "stop_time_update": [{"stop_id": "S1", "stop_sequence": 1}],
                 },
             },
             {
                 "id": "ok",
                 "trip_update": {
-                    "trip": {"trip_id": "T1"},
+                    "trip": {"trip_id": "T1", "route_id": "FEED_R", "direction_id": 1},
                     "stop_time_update": [
                         {"stop_id": "S1"},
                         {"stop_id": "S1", "stop_sequence": "bad"},
@@ -239,26 +237,146 @@ async def test_import_stop_times_skips_cancelled_unknown_and_bad_sequence():
             },
         ]
     }
-    shared = rt.RealtimeImportSharedContext(trips_in_db=frozenset({"T1"}))
-    stop_result = MagicMock()
-    stop_result.scalars.return_value = ["S1"]
+
+
+def test_collect_trip_update_feed_ids_includes_cancelled_trips():
+    data = {
+        "entity": [
+            {
+                "id": "cancelled",
+                "trip_update": {
+                    "trip": {"trip_id": "T1", "schedule_relationship": "CANCELED"},
+                    "stop_time_update": [{"stop_id": "S1", "stop_sequence": 1}],
+                },
+            },
+            {
+                "id": "ok",
+                "trip_update": {
+                    "trip": {"trip_id": "T2"},
+                    "stop_time_update": [{"stop_id": "S2", "stop_sequence": 1}],
+                },
+            },
+        ]
+    }
+    trip_ids, stop_ids = rt.collect_trip_update_feed_ids(data)
+    assert trip_ids == {"T1", "T2"}
+    assert stop_ids == {"S2"}
+
+
+def test_build_records_skips_unknown_trip_and_bad_sequence():
+    trips, stops = rt.build_rt_trip_and_stop_time_records(
+        _trip_update_payload(),
+        "TFI",
+        {"T1": ("STATIC_R", 0)},
+        frozenset({"S1"}),
+    )
+    assert len(trips) == 1
+    assert trips[0][0] == "T1"
+    assert trips[0][1] == "FEED_R"
+    assert trips[0][4] == "SCHEDULED"
+    assert len(stops) == 1
+    assert stops[0][0] == "S1"
+    assert stops[0][1] == "T1"
+    assert stops[0][2] == 3
+
+
+def test_build_records_imports_cancelled_trip_without_stop_times():
+    data = {
+        "entity": [
+            {
+                "id": "cancelled",
+                "trip_update": {
+                    "trip": {"trip_id": "T1", "schedule_relationship": "CANCELED", "route_id": "R1"},
+                    "stop_time_update": [{"stop_id": "S1", "stop_sequence": 1}],
+                },
+            }
+        ]
+    }
+    trips, stops = rt.build_rt_trip_and_stop_time_records(data, "TFI", {"T1": ("R1", 0)}, frozenset({"S1"}))
+    assert len(trips) == 1
+    assert trips[0][4] == "CANCELED"
+    assert stops == []
+
+
+def test_build_records_uses_duplicated_property_trip_id():
+    data = {
+        "entity": [
+            {
+                "id": "dup",
+                "trip_update": {
+                    "trip": {
+                        "trip_id": "descriptor",
+                        "schedule_relationship": "DUPLICATED",
+                        "route_id": "R1",
+                    },
+                    "trip_properties": {"trip_id": "T1"},
+                    "stop_time_update": [{"stop_id": "S1", "stop_sequence": 1, "arrival": {"delay": 5}}],
+                },
+            }
+        ]
+    }
+    trips, stops = rt.build_rt_trip_and_stop_time_records(data, "TFI", {"T1": ("R1", 0)}, frozenset({"S1"}))
+    assert trips[0][0] == "T1"
+    assert stops[0][1] == "T1"
+
+
+def test_build_rt_vehicle_records_skips_unknown_trips_and_uses_utc():
+    data = {
+        "entity": [
+            {
+                "id": "ok",
+                "vehicle": {
+                    "trip": {"trip_id": "T1"},
+                    "vehicle": {"id": "9"},
+                    "timestamp": "1705880460",
+                    "position": {"latitude": 53.3, "longitude": -6.2},
+                },
+            },
+            {
+                "id": "unknown",
+                "vehicle": {
+                    "trip": {"trip_id": "MISSING"},
+                    "vehicle": {"id": "10"},
+                    "timestamp": "1705880460",
+                    "position": {"latitude": 53.3, "longitude": -6.2},
+                },
+            },
+        ]
+    }
+    records = rt.build_rt_vehicle_records(data, "TFI", {"T1": ("R1", 0)})
+    assert len(records) == 1
+    assert records[0][0] == 9
+    assert records[0][1] == "T1"
+    assert records[0][2] == datetime.fromtimestamp(1705880460, tz=UTC).replace(tzinfo=None)
+
+
+@pytest.mark.asyncio
+async def test_load_shared_context_skips_query_when_no_trip_ids():
+    with patch.object(rt, "async_session_factory") as factory:
+        ctx = await rt.load_realtime_import_shared_context("TFI", set())
+    assert ctx.trip_dir == {}
+    factory.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_load_shared_context_queries_feed_trip_ids_only():
+    row = MagicMock()
+    row.id = "T1"
+    row.route_id = "R1"
+    row.direction = 0
+    result = MagicMock()
+    result.all.return_value = [row]
     session = AsyncMock()
-    session.execute = AsyncMock(return_value=stop_result)
+    session.execute = AsyncMock(return_value=result)
     session_cm = AsyncMock()
     session_cm.__aenter__.return_value = session
     session_cm.__aexit__.return_value = None
-    progress = MagicMock()
 
-    with (
-        patch.object(rt, "async_session_factory", return_value=session_cm),
-        patch.object(rt, "snapshot_copy_table", new_callable=AsyncMock) as copy,
-    ):
-        count = await importer.import_stop_times(data, progress, shared)
+    with patch.object(rt, "async_session_factory", return_value=session_cm):
+        ctx = await rt.load_realtime_import_shared_context("TFI", {"T1", "T2"})
 
-    assert count == 1
-    assert copy.await_args is not None
-    records = copy.await_args.kwargs["records"]
-    assert len(records) == 1
-    assert records[0][0] == "S1"
-    assert records[0][1] == "T1"
-    assert records[0][2] == 3
+    assert ctx.trip_dir == {"T1": ("R1", 0)}
+    stmt = session.execute.await_args.args[0]
+    compiled = str(stmt.compile(compile_kwargs={"render_postcompile": True}))
+    assert "IN" in compiled
+    assert "dataset" in compiled.lower()

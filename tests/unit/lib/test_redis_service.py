@@ -49,6 +49,18 @@ async def test_delete_keys_by_pattern(
 
 
 @pytest.mark.asyncio
+async def test_delete_keys_by_patterns_runs_each_pattern(redis_service: RedisService, mock_redis: AsyncMock):
+    mock_redis.keys.side_effect = [["a"], ["b"], []]
+    await redis_service.delete_keys_by_patterns(
+        CacheKeys.StopMaps.STOP_MAP_DELETE_ALL_KEY_TEMPLATE,
+        CacheKeys.RouteMaps.ROUTE_MAP_DELETE_ALL_KEY_TEMPLATE,
+        CacheKeys.RealTime.REALTIME_TRIP_DELETE_ALL_KEY_TEMPLATE,
+    )
+    assert mock_redis.keys.await_count == 3
+    assert mock_redis.delete.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_delete_keys_list(redis_service: RedisService, mock_redis: AsyncMock):
     # Arrange
     keys = ["key1", "key2"]
