@@ -21,19 +21,23 @@ def test_maximum_timestamp_is_computed_from_now():
 
 
 @pytest.mark.asyncio
-async def test_delete_old_delays_runs_another_batch_when_full():
+async def test_delete_old_delays_deletes_by_timestamp():
     session = AsyncMock()
-    full = MagicMock()
-    full.rowcount = 2
-    partial = MagicMock()
-    partial.rowcount = 1
-    session.execute = AsyncMock(side_effect=[full, partial])
+    result = MagicMock()
+    result.rowcount = 5
+    session.execute = AsyncMock(return_value=result)
     session.commit = AsyncMock()
     repo = _repo(session)
-    deleted = await repo.delete_old_delays(datetime(2020, 1, 1), batch_size=2)
-    assert deleted == 3
-    assert session.execute.await_count == 2
-    assert session.commit.await_count == 2
+    deleted = await repo.delete_old_delays(datetime(2020, 1, 1))
+    assert deleted == 5
+    session.execute.assert_awaited_once()
+    session.commit.assert_awaited_once()
+    compiled = session.execute.await_args.args[0].compile()
+    sql = str(compiled)
+    assert "DELETE FROM ts_stop_times" in sql
+    assert 'ts_stop_times."Timestamp" <' in sql
+    assert "id IN" not in sql
+    assert datetime(2020, 1, 1) in compiled.params.values()
 
 
 @pytest.mark.asyncio
