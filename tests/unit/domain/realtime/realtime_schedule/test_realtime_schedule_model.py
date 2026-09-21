@@ -103,6 +103,15 @@ def test_eta_less_than_one_minute_is_not_due():
     model = RealtimeScheduleModel(_static("12:00:30"))
     assert model.real_eta_text == "<1 min"
     assert model.is_due is False
+    assert is_due_arrival(time(12, 0)) is False
+
+
+@freeze_time("2026-03-21 12:01:00")
+def test_eta_exactly_sixty_seconds_ago_is_left_not_due():
+    model = RealtimeScheduleModel(_static("12:00:00"))
+    assert model.real_eta_text == "Left"
+    assert model.is_due is False
+    assert is_due_arrival(time(12, 0)) is False
 
 
 @freeze_time("2026-03-21 12:00:30")

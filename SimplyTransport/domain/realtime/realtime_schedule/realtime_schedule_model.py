@@ -20,7 +20,11 @@ def minutes_until_arrival(arrival: time, now: datetime | None = None) -> float:
 
 
 def is_due_arrival(arrival: time, now: datetime | None = None) -> bool:
-    """True when ``arrival`` was 0–60 seconds ago."""
+    """True when ``arrival`` was strictly between 0 and 60 seconds ago.
+
+    Matches ETA text ``Due``: exactly now is ``<1 min``, and exactly 60 seconds
+    ago is ``Left``.
+    """
     diff = minutes_until_arrival(arrival, now)
     return -1 < diff < 0
 
