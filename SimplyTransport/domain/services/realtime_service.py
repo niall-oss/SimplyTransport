@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..realtime.enums import REMOVED_TRIP_RELATIONSHIPS, OnTimeStatus
 from ..realtime.realtime_schedule.realtime_schedule_model import RealtimeScheduleModel
-from ..realtime.realtime_schedule.realtime_schedule_repo import RealtimeScheduleRepo
+from ..realtime.realtime_schedule.realtime_schedule_repo import RealtimeScheduleRepo, RTStopTimeOverlay
 from ..realtime.stop_time.rt_stop_time_repo import RTStopTimeRepo
+from ..realtime.trip.rt_trip_model import RTTripModel
 from ..realtime.trip.rt_trip_repo import RTTripRepo
 from ..realtime.vehicle.rt_vehicle_repo import RTVehicleRepo
 from ..schedule.static_schedule_model import StaticScheduleModel
@@ -68,6 +69,11 @@ class RealtimeService:
                 realtime_schedules.append(RealtimeScheduleModel(static_schedule=static))
 
         return realtime_schedules
+
+    async def load_recent_rt_overlay_for_schedules(
+        self, schedules: Sequence[StaticScheduleModel]
+    ) -> tuple[dict[str, RTTripModel], dict[tuple[str, str, int], RTStopTimeOverlay]]:
+        return await self.realtime_schedule_repo.load_recent_rt_overlay_for_schedules(schedules)
 
     async def apply_custom_23_00_sorting(
         self, realtime_schedules: list[RealtimeScheduleModel]

@@ -100,3 +100,31 @@ def test_shape_record_empty_distance():
     row = ["sh1", "53.3", "-6.2", "2", ""]
     col = csv_column_indexes(header, SHAPE_CSV_FIELDS)
     assert shape_record(row, col, "TFI") == ("sh1", 53.3, -6.2, 2, None, "TFI")
+
+
+@pytest.mark.asyncio
+async def test_orm_batch_importer_flushes_progress_once_for_small_batches():
+    import asyncio
+    from unittest.mock import MagicMock, patch
+
+    from SimplyTransport.lib.gtfs_importers import OrmBatchImporter
+
+    class TinyImporter(OrmBatchImporter):
+        progress_label = "t"
+
+        def __str__(self) -> str:
+            return "t"
+
+        def build_model(self, row: dict):
+            return row
+
+    progress = MagicMock()
+    progress.add_task.return_value = 7
+    importer = TinyImporter(iter([{"a": 1}] * 5), 5, "TFI")
+    queue: asyncio.Queue = asyncio.Queue()
+    with patch("SimplyTransport.lib.gtfs_importers._gtfs_progress") as progress_factory:
+        progress_factory.return_value.__enter__.return_value = progress
+        progress_factory.return_value.__exit__.return_value = None
+        await importer.producer(queue, 0)
+
+    progress.update.assert_called_once_with(7, advance=5)
