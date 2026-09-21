@@ -5,7 +5,10 @@ from unittest.mock import AsyncMock
 
 from freezegun import freeze_time
 from SimplyTransport.domain.realtime.enums import OnTimeStatus, ScheduleRelationship
-from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_model import RealtimeScheduleModel
+from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_model import (
+    RealtimeScheduleModel,
+    is_due_arrival,
+)
 from SimplyTransport.domain.realtime.stop_time.rt_stop_time_model import RTStopTimeModel
 from SimplyTransport.domain.realtime.trip.rt_trip_model import RTTripModel
 from SimplyTransport.domain.schedule.static_schedule_model import StaticScheduleModel
@@ -107,6 +110,7 @@ def test_eta_due_sets_is_due_in_the_last_minute():
     model = RealtimeScheduleModel(_static("12:00:00"))
     assert model.real_eta_text == "Due"
     assert model.is_due is True
+    assert is_due_arrival(time(12, 0)) is True
 
 
 @freeze_time("2026-03-21 12:02:00")
@@ -114,6 +118,7 @@ def test_eta_left_when_more_than_a_minute_past():
     model = RealtimeScheduleModel(_static("12:00:00"))
     assert model.real_eta_text == "Left"
     assert model.is_due is False
+    assert is_due_arrival(time(12, 0)) is False
 
 
 @freeze_time("2026-03-21 12:00:00")

@@ -5,7 +5,29 @@ from ..enums import REMOVED_TRIP_RELATIONSHIPS, OnTimeStatus, ScheduleRelationsh
 from ..stop_time.rt_stop_time_model import RTStopTimeModel
 from ..trip.rt_trip_model import RTTripModel
 
-__all__ = ["RealtimeScheduleModel"]
+__all__ = ["RealtimeScheduleModel", "is_due_arrival", "minutes_until_arrival", "real_arrival_time"]
+
+
+def minutes_until_arrival(arrival: time, now: datetime | None = None) -> float:
+    """Minutes from ``now`` until ``arrival`` today, wrapping across midnight at 23:00/00:00."""
+    now = now or datetime.now()
+    dt_arrival = datetime.combine(now.date(), arrival)
+    if dt_arrival.hour == 23 and now.hour == 0:
+        return (dt_arrival - now).total_seconds() / 60 - 1440
+    if dt_arrival.hour == 0 and now.hour == 23:
+        return (dt_arrival - now).total_seconds() / 60 + 1440
+    return (dt_arrival - now).total_seconds() / 60
+
+
+def is_due_arrival(arrival: time, now: datetime | None = None) -> bool:
+    """True when ``arrival`` was 0–60 seconds ago."""
+    diff = minutes_until_arrival(arrival, now)
+    return -1 < diff < 0
+
+
+def real_arrival_time(scheduled: time, delay_in_seconds: int, now: datetime | None = None) -> time:
+    now = now or datetime.now()
+    return (datetime.combine(now.date(), scheduled) + timedelta(seconds=delay_in_seconds)).time()
 
 
 class RealtimeScheduleModel:
@@ -73,23 +95,12 @@ class RealtimeScheduleModel:
         self.delay = f"{delay // 60} min"
 
     def set_real_arrival_time(self):
-        static_time = self.static_schedule.stop_time.arrival_time
-        combined_time = datetime.combine(datetime.now().date(), static_time) + timedelta(
-            seconds=self.delay_in_seconds
+        self.real_arrival_time = real_arrival_time(
+            self.static_schedule.stop_time.arrival_time, self.delay_in_seconds
         )
 
-        self.real_arrival_time = combined_time.time()
-
     def set_real_eta_text_and_due(self):
-        now = datetime.now()
-        dt_arrival_time = datetime.combine(datetime.now().date(), self.real_arrival_time)
-
-        if dt_arrival_time.hour == 23 and now.hour == 0:
-            time_difference = (dt_arrival_time - now).total_seconds() / 60 - 1440
-        elif dt_arrival_time.hour == 0 and now.hour == 23:
-            time_difference = (dt_arrival_time - now).total_seconds() / 60 + 1440
-        else:
-            time_difference = (dt_arrival_time - now).total_seconds() / 60
+        time_difference = minutes_until_arrival(self.real_arrival_time)
 
         if time_difference <= -1:
             self.real_eta_text = "Left"
@@ -100,8 +111,7 @@ class RealtimeScheduleModel:
         else:
             self.real_eta_text = f"{int(time_difference)} min"
 
-        if self.real_eta_text == "Due":
-            self.is_due = True
+        self.is_due = is_due_arrival(self.real_arrival_time)
 
     def set_on_time_status(self):
         dt_arrival_time = datetime.combine(datetime.now().date(), self.real_arrival_time)

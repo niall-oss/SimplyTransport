@@ -1,17 +1,19 @@
-import asyncio
-from collections.abc import Sequence
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
-import rich.progress as rp
-from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_model import RealtimeScheduleModel
+from SimplyTransport.domain.realtime.enums import REMOVED_TRIP_RELATIONSHIPS, ScheduleRelationship
+from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_model import (
+    is_due_arrival,
+    real_arrival_time,
+)
+from SimplyTransport.domain.realtime.realtime_schedule.realtime_schedule_repo import RTStopTimeOverlay
+from SimplyTransport.domain.realtime.trip.rt_trip_model import RTTripModel
 from SimplyTransport.domain.schedule.static_schedule_model import StaticScheduleModel
 from SimplyTransport.domain.services.realtime_service import RealtimeService, provide_realtime_service
 from SimplyTransport.lib.cache import RedisService
 from SimplyTransport.lib.cache_keys import CacheKeys
 from SimplyTransport.lib.constants import CLEANUP_DELAYS_AFTER_DAYS
-from SimplyTransport.lib.extensions.chunking import chunk_list
 from SimplyTransport.lib.logging.logging import provide_logger
-from SimplyTransport.lib.tracing import CreateSpan
+from SimplyTransport.lib.tracing import CreateSpan, get_app_tracer
 from SimplyTransport.timescale.ts_stop_times.ts_stop_time_model import TSStopTimeModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,17 +24,50 @@ from ..ts_stop_times.ts_stop_time_repo import TSStopTimeRepo
 logger = provide_logger(__name__)
 
 
-progress_columns = (
-    rp.SpinnerColumn(finished_text="✅"),
-    "[progress.description]{task.description}",
-    rp.BarColumn(),
-    rp.MofNCompleteColumn(),
-    rp.TaskProgressColumn(),
-    "|| Taken:",
-    rp.TimeElapsedColumn(),
-    "|| Left:",
-    rp.TimeRemainingColumn(),
-)
+def delay_recording_cache_key(route_code: str, stop_id: str, scheduled_time: time) -> str:
+    return CacheKeys.Delays.DELAYS_RECORDING_KEY_TEMPLATE.format(
+        route_code=route_code,
+        stop_id=stop_id,
+        scheduled_time=scheduled_time,
+    )
+
+
+def due_delay_records(
+    schedules: list[StaticScheduleModel],
+    overlay_trips: dict[str, RTTripModel],
+    overlay_stop_times: dict[tuple[str, str, int], RTStopTimeOverlay],
+    *,
+    now: datetime | None = None,
+) -> list[TSStopTimeModel]:
+    """Timescale rows for overlayed stops whose real arrival is in the Due window."""
+    now = now or datetime.now()
+    records: list[TSStopTimeModel] = []
+    for static in schedules:
+        trip_id = static.trip.id
+        rt_trip = overlay_trips.get(trip_id)
+        if rt_trip is not None and rt_trip.schedule_relationship in REMOVED_TRIP_RELATIONSHIPS:
+            continue
+
+        overlay = overlay_stop_times.get((trip_id, static.stop.id, static.stop_time.stop_sequence))
+        if overlay is None:
+            continue
+        if overlay.exact_match and overlay.row.schedule_relationship == ScheduleRelationship.SKIPPED:
+            continue
+
+        delay_in_seconds = max(overlay.row.arrival_delay or 0, overlay.row.departure_delay or 0)
+        arrival = real_arrival_time(static.stop_time.arrival_time, delay_in_seconds, now)
+        if not is_due_arrival(arrival, now):
+            continue
+
+        records.append(
+            TSStopTimeModel(
+                stop_id=static.stop.id,
+                route_code=static.route.short_name,
+                scheduled_time=static.stop_time.arrival_time,
+                delay_in_seconds=delay_in_seconds,
+            )
+        )
+    return records
 
 
 class DelaysService:
@@ -83,62 +118,28 @@ class DelaysService:
             trips=realtime_trip_ids,
         )
 
-        async def gather_realtime_schedules(
-            schedules: Sequence[StaticScheduleModel],
-        ) -> list[RealtimeScheduleModel]:
-            semaphore = asyncio.Semaphore(4)
+        overlay_trips, overlay_stop_times = await self.realtime_service.load_recent_rt_overlay_for_schedules(
+            schedules
+        )
 
-            async def limited_task(task):
-                async with semaphore:
-                    result = await task
-                    return result
+        with get_app_tracer().start_as_current_span("DelaysService.build_records"):
+            objects_to_commit = due_delay_records(schedules, overlay_trips, overlay_stop_times)
 
-            tasks = [
-                limited_task(
-                    self.realtime_service.get_realtime_schedules_for_static_schedules(schedule_batch)
-                )
-                for schedule_batch in chunk_list(schedules, 2000)
-            ]
-
-            with rp.Progress(*progress_columns) as progress:
-                progress_task = progress.add_task(
-                    "[green]Populating realtime schedules...", total=len(schedules)
-                )
-                results: list[RealtimeScheduleModel] = []
-                for task in asyncio.as_completed(tasks):
-                    result = await task
-                    results.extend(result)
-                    progress.update(progress_task, advance=len(result))
-
-            return results
-
-        realtime_schedules = await gather_realtime_schedules(schedules)
-        realtime_schedules = self.realtime_service.filter_to_only_due_schedules(realtime_schedules)
-        realtime_schedules = self.realtime_service.filter_to_only_schedules_with_updates(realtime_schedules)
-
-        keys_to_check = [self.create_cache_key_for_schedule(schedule) for schedule in realtime_schedules]
+        keys_to_check = [
+            delay_recording_cache_key(row.route_code, row.stop_id, row.scheduled_time)
+            for row in objects_to_commit
+        ]
         keys_in_cache = await self.redis_cache.check_keys_exist(keys_to_check)
 
-        objects_to_commit = []
-        keys_to_set = []
-
-        for schedule in realtime_schedules:
-            key = self.create_cache_key_for_schedule(schedule)
-            key_exists = keys_in_cache.get(key, False)
-
-            if key_exists:
+        filtered: list[TSStopTimeModel] = []
+        keys_to_set: list[str] = []
+        for row, key in zip(objects_to_commit, keys_to_check, strict=True):
+            if keys_in_cache.get(key, False):
                 continue
-
-            ts_stop_time = TSStopTimeModel(
-                stop_id=schedule.static_schedule.stop.id,
-                route_code=schedule.static_schedule.route.short_name,
-                scheduled_time=schedule.static_schedule.stop_time.arrival_time,
-                delay_in_seconds=schedule.delay_in_seconds,
-            )
+            filtered.append(row)
             keys_to_set.append(key)
-            objects_to_commit.append(ts_stop_time)
 
-        await self.ts_stop_time_repo.bulk_insert_delay_records(objects_to_commit, auto_commit=True)
+        await self.ts_stop_time_repo.bulk_insert_delay_records(filtered, auto_commit=True)
         await self.redis_cache.set_many_empty_keys(keys_to_set, expiration=60 * 5)
         number_of_delays_recorded = len(keys_to_set)
 
@@ -156,13 +157,6 @@ class DelaysService:
 
         logger.info(f"Deleted {number_of_delays_deleted} delays older than {CLEANUP_DELAYS_AFTER_DAYS} days.")
         return number_of_delays_deleted
-
-    def create_cache_key_for_schedule(self, schedule: RealtimeScheduleModel) -> str:
-        return CacheKeys.Delays.DELAYS_RECORDING_KEY_TEMPLATE.format(
-            route_code=schedule.static_schedule.route.short_name,
-            stop_id=schedule.static_schedule.stop.id,
-            scheduled_time=schedule.static_schedule.stop_time.arrival_time,
-        )
 
 
 async def provide_delays_service(

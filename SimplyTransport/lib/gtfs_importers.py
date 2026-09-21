@@ -1,5 +1,6 @@
 import asyncio
 import csv
+import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Sequence
 from enum import Enum
@@ -20,6 +21,7 @@ from ..domain.trip.trip_model import TripModel
 from . import time_date_conversions as tdc
 from .db.database import async_session_factory, get_async_engine
 from .db.services import create_secondary_indexes, drop_secondary_indexes
+from .progress import ProgressTicker
 
 NUMBER_OF_CONSUMERS = 2
 QUEUE_MAXSIZE = 2
@@ -81,7 +83,7 @@ SHAPE_CSV_FIELDS = (
 SHAPE_COPY_COLUMNS = ("shape_id", "lat", "lon", "sequence", "distance", "dataset")
 
 progress_columns = (
-    rp.SpinnerColumn(finished_text="✅"),
+    rp.SpinnerColumn(finished_text="OK"),
     "[progress.description]{task.description}",
     rp.BarColumn(),
     rp.MofNCompleteColumn(),
@@ -89,6 +91,10 @@ progress_columns = (
     "|| Taken:",
     rp.TimeElapsedColumn(),
 )
+
+
+def _gtfs_progress() -> rp.Progress:
+    return rp.Progress(*progress_columns, disable=not sys.stdout.isatty())
 
 
 class ClearStrategy(Enum):
@@ -326,19 +332,20 @@ class OrmBatchImporter(AsyncImporter):
         batch_count = 0
         objects_to_commit = []
 
-        with rp.Progress(*progress_columns) as progress:
+        with _gtfs_progress() as progress:
             task = progress.add_task(f"[green]{self.progress_label}", total=self.row_count)
 
-            for row in self.reader:
-                objects_to_commit.append(self.build_model(row))
-                batch_count += 1
-                self.rows_imported += 1
-                progress.update(task, advance=1)
+            with ProgressTicker(progress, task) as ticker:
+                for row in self.reader:
+                    objects_to_commit.append(self.build_model(row))
+                    batch_count += 1
+                    self.rows_imported += 1
+                    ticker.tick()
 
-                if batch_count >= self.batchsize:
-                    await q.put(objects_to_commit)
-                    objects_to_commit = []
-                    batch_count = 0
+                    if batch_count >= self.batchsize:
+                        await q.put(objects_to_commit)
+                        objects_to_commit = []
+                        batch_count = 0
 
             if objects_to_commit:
                 await q.put(objects_to_commit)
@@ -392,21 +399,22 @@ class CopyImporter(AsyncImporter):
                 reader = csv.reader(f)
                 col = csv_column_indexes(next(reader), self.csv_fields)
 
-                with rp.Progress(*progress_columns) as progress:
+                with _gtfs_progress() as progress:
                     task = progress.add_task(f"[green]{self.progress_label}", total=self.row_count)
 
-                    for row in reader:
-                        batch.append(self.record_from_row(row, col))
-                        self.rows_imported += 1
+                    with ProgressTicker(progress, task) as ticker:
+                        for row in reader:
+                            batch.append(self.record_from_row(row, col))
+                            self.rows_imported += 1
 
-                        if len(batch) >= self.batchsize:
+                            if len(batch) >= self.batchsize:
+                                await self._copy_batch(asyncpg_conn, conn, batch)
+                                ticker.tick(len(batch))
+                                batch = []
+
+                        if batch:
                             await self._copy_batch(asyncpg_conn, conn, batch)
-                            progress.update(task, advance=len(batch))
-                            batch = []
-
-                    if batch:
-                        await self._copy_batch(asyncpg_conn, conn, batch)
-                        progress.update(task, advance=len(batch))
+                            ticker.tick(len(batch))
 
     async def _copy_batch(self, asyncpg_conn: Any, conn: Any, batch: list[tuple]) -> None:
         columns = self.copy_columns
