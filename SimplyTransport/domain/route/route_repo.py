@@ -80,25 +80,25 @@ class RouteRepo(SQLAlchemyAsyncRepository[RouteModel]):  # type: ignore
 
         return await self.get_many(
             RouteModel.trips.any(TripModel.stop_times.any(StopTimeModel.stop_id == stop_id)),
-            statement=select(RouteModel).options(joinedload(RouteModel.agency)),
+            load=joinedload(RouteModel.agency),
         )
 
     async def get_by_id_with_agency(self, id: str) -> RouteModel:
         """Get a route by id with agency."""
 
-        return await self.get(id, statement=select(RouteModel).options(joinedload(RouteModel.agency)))
+        return await self.get(id, load=joinedload(RouteModel.agency))
 
     async def get_with_agencies(self) -> list[RouteModel]:
         """Get all routes with agencies"""
 
-        return await self.get_many(statement=select(RouteModel).options(joinedload(RouteModel.agency)))
+        return await self.get_many(load=joinedload(RouteModel.agency))
 
     async def get_with_agencies_by_agency_id(self, agency_id: str) -> list[RouteModel]:
         """Get all routes with agencies by agency_id"""
 
         return await self.get_many(
             RouteModel.agency_id == agency_id,
-            statement=select(RouteModel).options(joinedload(RouteModel.agency)),
+            load=joinedload(RouteModel.agency),
         )
 
 
