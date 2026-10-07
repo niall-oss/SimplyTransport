@@ -17,6 +17,7 @@ opentelemetry-semantic-conventions==0.65b0
 opentelemetry-util-http==0.65b0
 pydantic==2.13.5
 pydantic-settings==2.15.0
+pyjwt==2.15.1
 redis==8.1.0
 structlog==26.1.0
 uvicorn==0.52.4
