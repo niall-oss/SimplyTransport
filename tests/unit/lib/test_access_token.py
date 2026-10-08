@@ -12,6 +12,7 @@ from SimplyTransport.controllers.api.token_controller import TokenController
 from SimplyTransport.lib import settings
 from SimplyTransport.lib.auth import (
     ApiTokenMiddleware,
+    access_cookie_needs_renewal,
     bearer_rate_limit_config,
     cookie_header_value,
     decode_access_token,
@@ -75,6 +76,33 @@ def test_token_defaults() -> None:
     assert AppSettings.model_fields["API_TOKEN_COOKIE_NAME"].default == "st_access_token"
     assert AppSettings.model_fields["API_TOKEN_MINT_LIMIT_PER_HOUR"].default == 10
     assert AppSettings.model_fields["API_BEARER_RATE_LIMIT_PER_MINUTE"].default == 60
+
+
+@pytest.mark.parametrize("ttl", [0, -1])
+def test_nonpositive_token_ttl_is_rejected(monkeypatch: pytest.MonkeyPatch, ttl: int) -> None:
+    monkeypatch.setenv("API_TOKEN_TTL_SECONDS", str(ttl))
+    reset_settings()
+    try:
+        with pytest.raises(ValidationError):
+            settings.get_settings()
+    finally:
+        reset_settings()
+
+
+def test_cookie_near_expiry_needs_renewal() -> None:
+    now = datetime.now(UTC)
+    expiring = jwt.encode(
+        {
+            "sub": "anonymous",
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(seconds=60)).timestamp()),
+        },
+        settings.app.SECRET_KEY,
+        algorithm="HS256",
+    )
+    assert access_cookie_needs_renewal(expiring) is True
+    assert access_cookie_needs_renewal(issue_access_token()) is False
+    assert access_cookie_needs_renewal(None) is True
 
 
 def test_production_rejects_default_secret(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -54,6 +54,11 @@ class RootController(Controller):
             },
         )
 
+    @get("/access-token")
+    async def refresh_access_token(self) -> Response:
+        """Renew the access cookie for a page that is still open."""
+        return Response(content="", media_type="text/html")
+
     @get("/about")
     async def about(self) -> Template:
         return Template(template_name="about.html")

@@ -4,7 +4,7 @@ import jwt
 import pytest
 from litestar.testing import AsyncTestClient
 from SimplyTransport.lib import settings
-from SimplyTransport.lib.auth import decode_access_token, issue_access_token
+from SimplyTransport.lib.auth import decode_access_token
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -39,14 +39,29 @@ async def test_bearer_token_allows_api_and_does_not_set_cookie(async_client: Asy
 async def test_cookie_allows_api_and_slides(async_client: AsyncTestClient) -> None:
     saved_headers = dict(async_client.headers)
     saved_cookies = dict(async_client.cookies)
+    now = datetime.now(UTC)
+    original_exp = now + timedelta(minutes=5)
+    issued = jwt.encode(
+        {
+            "sub": "anonymous",
+            "iat": int(now.timestamp()),
+            "exp": int(original_exp.timestamp()),
+        },
+        settings.app.SECRET_KEY,
+        algorithm="HS256",
+    )
+    original = decode_access_token(issued)
     async_client.headers.clear()
     async_client.cookies.clear()
-    async_client.cookies.set(settings.app.API_TOKEN_COOKIE_NAME, issue_access_token())
+    async_client.cookies.set(settings.app.API_TOKEN_COOKIE_NAME, issued)
     try:
         response = await async_client.get("/api/v1/agency/")
         assert response.status_code == 200
         refreshed = decode_access_token(_set_cookie_value(response.headers["set-cookie"]))
         assert refreshed.sub == "anonymous"
+        assert refreshed.exp > original.exp
+        remaining = (refreshed.exp - datetime.now(UTC)).total_seconds()
+        assert abs(remaining - settings.app.API_TOKEN_TTL_SECONDS) <= 5
     finally:
         async_client.headers.clear()
         async_client.headers.update(saved_headers)
@@ -75,7 +90,41 @@ async def test_token_route_returns_bearer_token(async_client: AsyncTestClient) -
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["expires_in"] == settings.app.API_TOKEN_TTL_SECONDS
-    assert decode_access_token(body["access_token"]).sub == "anonymous"
+    token = decode_access_token(body["access_token"])
+    assert token.sub == "anonymous"
+    remaining = (token.exp - datetime.now(UTC)).total_seconds()
+    assert abs(remaining - body["expires_in"]) <= 5
+
+
+async def test_open_page_renews_cookie_before_expiry(async_client: AsyncTestClient) -> None:
+    saved_headers = dict(async_client.headers)
+    saved_cookies = dict(async_client.cookies)
+    now = datetime.now(UTC)
+    original_exp = now + timedelta(seconds=60)
+    issued = jwt.encode(
+        {
+            "sub": "anonymous",
+            "iat": int(now.timestamp()),
+            "exp": int(original_exp.timestamp()),
+        },
+        settings.app.SECRET_KEY,
+        algorithm="HS256",
+    )
+    async_client.headers.clear()
+    async_client.cookies.clear()
+    async_client.cookies.set(settings.app.API_TOKEN_COOKIE_NAME, issued)
+    try:
+        response = await async_client.get("/access-token")
+        assert response.status_code == 200
+        refreshed = decode_access_token(_set_cookie_value(response.headers["set-cookie"]))
+        assert refreshed.exp > original_exp
+        remaining = (refreshed.exp - datetime.now(UTC)).total_seconds()
+        assert abs(remaining - settings.app.API_TOKEN_TTL_SECONDS) <= 5
+    finally:
+        async_client.headers.clear()
+        async_client.headers.update(saved_headers)
+        async_client.cookies.clear()
+        async_client.cookies.update(saved_cookies)
 
 
 async def test_map_page_sets_access_cookie(async_client: AsyncTestClient) -> None:

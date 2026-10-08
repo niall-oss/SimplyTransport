@@ -64,6 +64,13 @@ class AppSettings(BaseSettings):
         # Sets the log level to DEBUG if in DEV else INFO
         return "DEBUG" if values.data.get("ENVIRONMENT") == "DEV" else "INFO"
 
+    @field_validator("API_TOKEN_TTL_SECONDS")
+    @classmethod
+    def require_positive_token_ttl(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("API_TOKEN_TTL_SECONDS must be greater than 0")
+        return value
+
     @model_validator(mode="after")
     def reject_weak_production_secret(self) -> Self:
         if self.ENVIRONMENT == "PROD" and (self.SECRET_KEY == "secret" or len(self.SECRET_KEY) < 32):

@@ -16,6 +16,8 @@ from SimplyTransport.lib import settings
 
 ANONYMOUS_SUBJECT = "anonymous"
 JWT_ALGORITHM = "HS256"
+RENEW_AT_COOKIE_NAME = "st_access_renew_at"
+ACCESS_TOKEN_REFRESH_PATH = "/access-token"
 _UNAUTHORIZED = "Missing or invalid access token"
 AuthSource = Literal["bearer", "cookie"]
 
@@ -56,17 +58,35 @@ def access_token_is_valid(encoded_token: str | None) -> bool:
     return True
 
 
-def cookie_header_value(encoded_token: str) -> str:
-    """HttpOnly site cookie. Secure only in production, where the site is HTTPS."""
-    parts = [
-        f"{settings.app.API_TOKEN_COOKIE_NAME}={encoded_token}",
-        "HttpOnly",
-        "Path=/",
-        "SameSite=Lax",
-        f"Max-Age={settings.app.API_TOKEN_TTL_SECONDS}",
-    ]
+def access_cookie_needs_renewal(encoded_token: str | None) -> bool:
+    """True when the cookie is missing, expired, or inside the second half of its life."""
+    if not access_token_is_valid(encoded_token):
+        return True
+    assert encoded_token is not None
+    token = decode_access_token(encoded_token)
+    remaining = (token.exp - datetime.now(UTC)).total_seconds()
+    return remaining <= settings.app.API_TOKEN_TTL_SECONDS / 2
+
+
+def _cookie_attributes(*, httponly: bool) -> list[str]:
+    parts = ["Path=/", "SameSite=Lax", f"Max-Age={settings.app.API_TOKEN_TTL_SECONDS}"]
+    if httponly:
+        parts.insert(0, "HttpOnly")
     if settings.app.ENVIRONMENT == "PROD":
         parts.append("Secure")
+    return parts
+
+
+def cookie_header_value(encoded_token: str) -> str:
+    """HttpOnly site cookie. Secure only in production, where the site is HTTPS."""
+    parts = [f"{settings.app.API_TOKEN_COOKIE_NAME}={encoded_token}", *_cookie_attributes(httponly=True)]
+    return "; ".join(parts)
+
+
+def renew_at_cookie_header_value() -> str:
+    """JS-readable time at which an open page should ask for a new access cookie."""
+    renew_at = int(datetime.now(UTC).timestamp()) + settings.app.API_TOKEN_TTL_SECONDS // 2
+    parts = [f"{RENEW_AT_COOKIE_NAME}={renew_at}", *_cookie_attributes(httponly=False)]
     return "; ".join(parts)
 
 
@@ -109,7 +129,8 @@ def token_mint_rate_limit_config() -> RateLimitConfig:
 
 def _append_set_cookie(message: HTTPResponseStartEvent, encoded_token: str) -> None:
     headers = MutableScopeHeaders(message)
-    headers.headers.append((b"set-cookie", cookie_header_value(encoded_token).encode("latin-1")))
+    for value in (cookie_header_value(encoded_token), renew_at_cookie_header_value()):
+        headers.headers.append((b"set-cookie", value.encode("latin-1")))
 
 
 def _send_with_access_cookie(send: Send, encoded_token: str) -> Send:
@@ -169,7 +190,7 @@ class ApiTokenMiddleware(AbstractAuthenticationMiddleware):
 
 
 class SiteAccessCookieMiddleware:
-    """Set st_access_token on HTML responses when the browser does not already have a valid one."""
+    """Keep st_access_token on HTML responses, including pages left open past half the TTL."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -181,7 +202,9 @@ class SiteAccessCookieMiddleware:
 
         connection = ASGIConnection(scope)
         existing = connection.cookies.get(settings.app.API_TOKEN_COOKIE_NAME)
-        if access_token_is_valid(existing):
+        # /access-token is the timer on an already-open page. Always replace the cookie there.
+        refresh_open_page = scope.get("path") == ACCESS_TOKEN_REFRESH_PATH
+        if not refresh_open_page and not access_cookie_needs_renewal(existing):
             await self.app(scope, receive, send)
             return
 
@@ -191,7 +214,7 @@ class SiteAccessCookieMiddleware:
             if message["type"] == "http.response.start":
                 start = cast(HTTPResponseStartEvent, message)
                 content_type = MutableScopeHeaders(start).get("content-type", "")
-                if content_type.startswith("text/html"):
+                if content_type.startswith("text/html") or refresh_open_page:
                     _append_set_cookie(start, encoded_token)
             await send(message)
 
