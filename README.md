@@ -83,6 +83,12 @@ Realtime data is updated every minute.
 
 [OpenAPI Yaml](https://simplytransport.ie/docs/openapi.yaml)
 
+`/api/v1` requires a token. `POST /api/v1/token` returns one. Send `access_token` as `Authorization: Bearer`, then request another when it expires or the API returns 401. Scalar and the other docs pages describe the same flow.
+
+Bearer clients share 60 requests per minute per IP across `/api/v1`. Behind nginx, keep uvicorn `--proxy-headers` on so that limit uses the visitor address. The website does not spend this limit.
+
+Set `SECRET_KEY` to at least 32 characters in production. The app will not start with the default.
+
 
 ### Maps
 

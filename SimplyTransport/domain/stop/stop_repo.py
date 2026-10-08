@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from ...lib.distance_calculator import calculate_min_max_coordinates, distance_between_points
+from ...lib.model_select import select_model
 from ..route.route_model import RouteModel
 from ..stop_features.stop_feature_model import StopFeatureModel
 from ..stop_times.stop_time_model import StopTimeModel
@@ -44,7 +45,7 @@ class StopRepo(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type-var]
         """Get stops by route_id."""
 
         return await self.get_many(
-            statement=select(StopModel)
+            statement=select_model(StopModel)
             .join(StopTimeModel, StopTimeModel.stop_id == StopModel.id)
             .join(TripModel, TripModel.id == StopTimeModel.trip_id)
             .where(TripModel.direction == direction)
@@ -56,7 +57,7 @@ class StopRepo(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type-var]
         """Get stops by route_ids."""
 
         return await self.get_many(
-            statement=select(StopModel)
+            statement=select_model(StopModel)
             .join(StopTimeModel, StopTimeModel.stop_id == StopModel.id)
             .join(TripModel, TripModel.id == StopTimeModel.trip_id)
             .where(TripModel.direction == direction)
@@ -96,18 +97,18 @@ class StopRepo(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type-var]
     async def get_by_id_with_stop_feature(self, id: str) -> StopModel:
         """Get a stop by id with stop feature."""
 
-        return await self.get(id, statement=select(StopModel).options(joinedload(StopModel.stop_feature)))
+        return await self.get(id, load=joinedload(StopModel.stop_feature))
 
     async def get_all_with_stop_feature(self) -> list[StopModel]:
         """Get all stops with stop features."""
 
-        return await self.get_many(statement=select(StopModel))
+        return await self.get_many()
 
     async def get_stops_with_realtime_displays(self) -> list[StopModel]:
         """Get stops by realtime displays."""
 
         return await self.get_many(
-            statement=select(StopModel)
+            statement=select_model(StopModel)
             .join(StopFeatureModel, StopFeatureModel.stop_id == StopModel.id)
             .where(StopFeatureModel.rtpi_active == True)  # noqa: E712
         )
@@ -116,7 +117,7 @@ class StopRepo(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type-var]
         """Get stops by realtime displays."""
 
         return await self.get_many(
-            statement=select(StopModel)
+            statement=select_model(StopModel)
             .join(StopFeatureModel, StopFeatureModel.stop_id == StopModel.id)
             .where(StopFeatureModel.shelter_active == True)  # noqa: E712
         )
@@ -125,7 +126,7 @@ class StopRepo(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type-var]
         """Get stops by realtime displays."""
 
         return await self.get_many(
-            statement=select(StopModel)
+            statement=select_model(StopModel)
             .join(StopFeatureModel, StopFeatureModel.stop_id == StopModel.id)
             .where(StopFeatureModel.surveyed == False)  # noqa: E712
         )
@@ -137,7 +138,7 @@ class StopRepo(SQLAlchemyAsyncRepository[StopModel]):  # type: ignore[type-var]
         min_max_coordinates = calculate_min_max_coordinates(latitude, longitude, distance_in_meters)
 
         potential_stops = await self.get_many(
-            statement=select(StopModel)
+            statement=select_model(StopModel)
             .where(StopModel.lat.between(min_max_coordinates.min_latitude, min_max_coordinates.max_latitude))
             .where(
                 StopModel.lon.between(min_max_coordinates.min_longitude, min_max_coordinates.max_longitude)

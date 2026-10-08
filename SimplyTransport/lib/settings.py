@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
-from pydantic import ValidationInfo, field_validator
+from pydantic import ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,10 @@ class AppSettings(BaseSettings):
 
     VERSION: str = "1.2.0"  # Version bumping will cache bust static css/js files
     SECRET_KEY: str = "secret"
+    API_TOKEN_TTL_SECONDS: int = 3600
+    API_TOKEN_COOKIE_NAME: str = "st_access_token"
+    API_TOKEN_MINT_LIMIT_PER_HOUR: int = 10
+    API_BEARER_RATE_LIMIT_PER_MINUTE: int = 60
     LITESTAR_APP: str = "SimplyTransport.app:create_app"
 
     # Database
@@ -59,6 +63,19 @@ class AppSettings(BaseSettings):
     def set_log_level(cls, v: str, values: ValidationInfo) -> str:  # noqa: N805
         # Sets the log level to DEBUG if in DEV else INFO
         return "DEBUG" if values.data.get("ENVIRONMENT") == "DEV" else "INFO"
+
+    @field_validator("API_TOKEN_TTL_SECONDS")
+    @classmethod
+    def require_positive_token_ttl(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("API_TOKEN_TTL_SECONDS must be greater than 0")
+        return value
+
+    @model_validator(mode="after")
+    def reject_weak_production_secret(self) -> Self:
+        if self.ENVIRONMENT == "PROD" and (self.SECRET_KEY == "secret" or len(self.SECRET_KEY) < 32):
+            raise ValueError("SECRET_KEY must be at least 32 characters when ENVIRONMENT is PROD")
+        return self
 
     model_config = SettingsConfigDict(env_file=(".env"), extra="ignore")
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 class TSStopTimeModel(BigIntBase):
     __tablename__: str = "ts_stop_times"  # type: ignore[assignment]
 
-    Timestamp: Mapped[DateTime] = mapped_column(
+    Timestamp: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, primary_key=True
     )
     stop_id: Mapped[str] = mapped_column(String(length=1000), nullable=False, index=True)

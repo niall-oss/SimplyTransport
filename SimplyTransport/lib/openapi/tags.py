@@ -58,6 +58,10 @@ class Tags:
         name="Delays",
         description="Historical early and late arrivals, in seconds",
     )
+    AUTH = Tag(
+        name="Auth",
+        description="Short-lived tokens for the API.",
+    )
 
     @classmethod
     def list_all_tags(cls) -> list[Tag]:

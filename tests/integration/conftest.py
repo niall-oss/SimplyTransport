@@ -26,6 +26,11 @@ TEST_ENV = {
     "REDIS_PASSWORD": "",
     "ENVIRONMENT": "TEST",
     "GTFS_TFI_DATASET": "TFI",
+    # Long enough that PyJWT does not warn while the suite signs tokens.
+    "SECRET_KEY": "simplytransport-test-secret-key!",
+    # The suite shares one client IP. Production limits are 10/hour and 60/minute.
+    "API_TOKEN_MINT_LIMIT_PER_HOUR": "10000",
+    "API_BEARER_RATE_LIMIT_PER_MINUTE": "10000",
 }
 
 
@@ -220,4 +225,8 @@ def app(test_stack: None) -> Litestar:
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def async_client(app: Litestar) -> AsyncIterator[AsyncTestClient]:
     async with AsyncTestClient(app=app) as client:
+        token_response = await client.post("/api/v1/token")
+        assert token_response.status_code == 200
+        access_token = token_response.json()["access_token"]
+        client.headers["Authorization"] = f"Bearer {access_token}"
         yield client

@@ -12,6 +12,7 @@ from SimplyTransport.controllers.api.shape_controller import ShapeController
 from SimplyTransport.controllers.api.statistics_controller import StatisticsController
 from SimplyTransport.controllers.api.stop_controller import StopController
 from SimplyTransport.controllers.api.stop_time_controller import StopTimeController
+from SimplyTransport.controllers.api.token_controller import TokenController
 from SimplyTransport.controllers.api.trip_controller import TripController
 from SimplyTransport.controllers.delays_controller import DelaysController
 from SimplyTransport.controllers.events_controller import EventsController
@@ -20,6 +21,12 @@ from SimplyTransport.controllers.realtime_controller import RealtimeController
 from SimplyTransport.controllers.root_controller import RootController
 from SimplyTransport.controllers.search_controller import SearchController
 from SimplyTransport.controllers.stats_controller import StatsController
+from SimplyTransport.lib.auth import (
+    ApiTokenMiddleware,
+    SiteAccessCookieMiddleware,
+    bearer_rate_limit_config,
+    token_mint_rate_limit_config,
+)
 from SimplyTransport.lib.openapi.tags import Tags
 
 __all__ = ["create_api_router", "create_views_router"]
@@ -66,6 +73,7 @@ def create_views_router() -> Router:
 
     return Router(
         path="/",
+        middleware=[SiteAccessCookieMiddleware],
         route_handlers=[
             root_route_handler,
             search_route_handler,
@@ -138,8 +146,10 @@ def create_api_router() -> Router:
         route_handlers=[DelaysApiController],
     )
 
-    return Router(
-        path="/api/v1",
+    protected_route_handler = Router(
+        path="/",
+        security=[{"BearerToken": []}],
+        middleware=[ApiTokenMiddleware, bearer_rate_limit_config().middleware],
         route_handlers=[
             agency_route_handler,
             calendar_route_handler,
@@ -156,4 +166,16 @@ def create_api_router() -> Router:
             events_route_handler,
             delays_route_handler,
         ],
+    )
+
+    token_route_handler = Router(
+        path="/",
+        tags=[tags.AUTH.name],
+        middleware=[token_mint_rate_limit_config().middleware],
+        route_handlers=[TokenController],
+    )
+
+    return Router(
+        path="/api/v1",
+        route_handlers=[protected_route_handler, token_route_handler],
     )

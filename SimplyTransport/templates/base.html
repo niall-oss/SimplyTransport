@@ -43,6 +43,33 @@
         </div>
     </body>
     <script>
+        (function () {
+            var cookieName = "st_access_renew_at";
+
+            function renewAtSeconds() {
+                var parts = document.cookie ? document.cookie.split("; ") : [];
+                for (var i = 0; i < parts.length; i++) {
+                    if (parts[i].indexOf(cookieName + "=") === 0) {
+                        return Number(parts[i].slice(cookieName.length + 1));
+                    }
+                }
+                return null;
+            }
+
+            function scheduleAccessRenewal() {
+                var renewAt = renewAtSeconds();
+                if (renewAt === null || Number.isNaN(renewAt)) {
+                    return;
+                }
+                var delay = Math.max(renewAt * 1000 - Date.now(), 1000);
+                window.setTimeout(function () {
+                    fetch("/access-token", { credentials: "same-origin" }).finally(scheduleAccessRenewal);
+                }, delay);
+            }
+
+            scheduleAccessRenewal();
+        })();
+
         document.addEventListener("DOMContentLoaded", function() {
             const busArt = `
 .---------------------------.
